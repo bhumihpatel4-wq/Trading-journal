@@ -1,1 +1,1289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Trading Journal</title>
+  <style>
+    :root{
+      --bg1:#05070c;
+      --bg2:#0b1320;
+      --card:rgba(255,255,255,.06);
+      --card2:rgba(255,255,255,.08);
+      --border:rgba(255,255,255,.14);
+      --text:#eaf0ff;
+      --muted:rgba(234,240,255,.72);
+      --muted2:rgba(234,240,255,.52);
+      --good:#19c37d;
+      --bad:#ff4d4f;
+      --warn:#ffcc00;
+      --shadow:0 18px 60px rgba(0,0,0,.55);
+      --radius:18px;
+      --radius2:14px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 60% 25%, rgba(25,195,125,.12), transparent 60%),
+        radial-gradient(900px 600px at 20% 70%, rgba(120,170,255,.10), transparent 60%),
+        linear-gradient(160deg, var(--bg1), var(--bg2));
+      min-height:100vh;
+      padding:24px;
+    }
+    .wrap{max-width:1200px;margin:0 auto}
+    header{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+      margin-bottom:16px;
+    }
+    h1{margin:0;font-size:36px;letter-spacing:.2px}
+    .sub{margin-top:6px;color:var(--muted2);font-size:14px}
+    .topRight{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    .pill{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.04);
+      color:var(--muted);
+      padding:7px 10px;border-radius:999px;font-size:12px;
+    }
+    .btn{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      padding:10px 14px;border-radius:12px;
+      cursor:pointer;
+      transition:.15s transform, .15s background;
+      user-select:none;
+      font-weight:600;
+    }
+    .btn:hover{transform:translateY(-1px);background:rgba(255,255,255,.09)}
+    .btn.primary{background:rgba(25,195,125,.14);border-color:rgba(25,195,125,.45)}
+    .btn.primary:hover{background:rgba(25,195,125,.18)}
+    .btn.danger{background:rgba(255,77,79,.10);border-color:rgba(255,77,79,.35)}
+    .btn.small{padding:8px 10px;border-radius:10px;font-size:12px}
+    .btn.tiny{padding:7px 10px;border-radius:10px;font-size:12px}
+    .grid{
+      display:grid;
+      grid-template-columns: 1.55fr 1fr;
+      gap:16px;
+    }
+    @media (max-width: 980px){
+      .grid{grid-template-columns:1fr}
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .cardHeader{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      padding:14px 14px 10px 14px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      background:linear-gradient(180deg, rgba(255,255,255,.04), transparent);
+    }
+    .cardHeader .left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .monthTitle{font-size:16px;font-weight:800;letter-spacing:.3px}
+    .navBtns{display:flex;gap:8px}
+    .helpRow{
+      padding:10px 14px;
+      display:flex;gap:10px;flex-wrap:wrap;
+      color:var(--muted2);
+      font-size:12px;
+    }
+    .calendar{
+      padding:12px 14px 16px 14px;
+    }
+    .dow{
+      display:grid;grid-template-columns:repeat(7,1fr);gap:8px;
+      margin-bottom:8px;
+      color:var(--muted2);
+      font-size:12px;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+    }
+    .days{
+      display:grid;grid-template-columns:repeat(7,1fr);gap:8px;
+    }
+    .day{
+      min-height:76px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.03);
+      border-radius:14px;
+      padding:8px;
+      cursor:pointer;
+      position:relative;
+      overflow:hidden;
+      transition:.12s transform, .12s background, .12s border;
+    }
+    .day:hover{transform:translateY(-1px);background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.16)}
+    .day.muted{opacity:.35;cursor:default}
+    .dayNum{font-weight:800;font-size:12px;color:var(--muted)}
+    .pl{
+      position:absolute;left:8px;bottom:8px;
+      font-weight:800;font-size:12px;
+      padding:3px 8px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.18);
+    }
+    .pl.good{color:#bff5df;border-color:rgba(25,195,125,.35);background:rgba(25,195,125,.12)}
+    .pl.bad{color:#ffd2d2;border-color:rgba(255,77,79,.35);background:rgba(255,77,79,.10)}
+    .todayRing{
+      position:absolute;inset:0;
+      border:2px solid rgba(120,170,255,.55);
+      border-radius:14px;
+      pointer-events:none;
+      opacity:.6;
+    }
+    .selectedRing{
+      position:absolute;inset:0;
+      border:2px solid rgba(25,195,125,.65);
+      border-radius:14px;
+      pointer-events:none;
+    }
 
+    .detail{
+      padding:14px;
+    }
+    .detail .tip{color:var(--muted2);font-size:12px;line-height:1.45;margin-bottom:12px}
+    .summaryRow{
+      display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px
+    }
+    .stat{
+      flex:1;
+      min-width:150px;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:14px;
+      padding:10px;
+    }
+    .stat .k{color:var(--muted2);font-size:11px;text-transform:uppercase;letter-spacing:.6px}
+    .stat .v{font-size:18px;font-weight:900;margin-top:6px}
+    .list{
+      display:flex;flex-direction:column;gap:10px;
+      max-height:380px;overflow:auto;padding-right:4px;
+    }
+    .tradeItem{
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:14px;
+      padding:10px;
+      display:flex;justify-content:space-between;gap:10px;
+      cursor:pointer;
+    }
+    .tradeItem:hover{border-color:rgba(255,255,255,.16);background:rgba(255,255,255,.06)}
+    .tLeft{display:flex;flex-direction:column;gap:4px}
+    .tTop{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .badge{
+      font-size:11px;font-weight:900;
+      padding:3px 8px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.18);
+      color:var(--muted);
+    }
+    .badge.buy{border-color:rgba(25,195,125,.35);background:rgba(25,195,125,.10);color:#bff5df}
+    .badge.sell{border-color:rgba(255,77,79,.35);background:rgba(255,77,79,.10);color:#ffd2d2}
+    .tMeta{color:var(--muted2);font-size:12px}
+    .tPL{
+      font-weight:1000;font-size:16px;white-space:nowrap;
+      align-self:flex-start;
+    }
+    .tPL.good{color:#bff5df}
+    .tPL.bad{color:#ffd2d2}
+
+    /* Modal */
+    .overlay{
+      position:fixed;inset:0;
+      background:rgba(0,0,0,.78);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:999;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+    .overlay.show{display:flex}
+    .modal{
+      width:min(1100px, 100%);
+      max-height:92vh;
+      overflow:auto;
+      background:linear-gradient(180deg, rgba(7,10,16,.96), rgba(10,14,22,.92));
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:22px;
+      box-shadow:0 24px 90px rgba(0,0,0,.75);
+    }
+    .modalHead{
+      padding:14px 16px;
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.20);
+    }
+    .modalHead h3{margin:0;font-size:18px}
+    .modalBody{padding:14px 16px 16px 16px}
+    .modalGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+    }
+    @media (max-width: 980px){
+      .modalGrid{grid-template-columns:1fr}
+    }
+    .panel{
+      background:rgba(0,0,0,.30);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:16px;
+      padding:12px;
+    }
+    .panelTitle{
+      font-weight:900;
+      margin:0 0 8px 0;
+      font-size:13px;
+      color:var(--muted);
+      letter-spacing:.3px;
+      text-transform:uppercase;
+    }
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width: 620px){.row2{grid-template-columns:1fr}}
+    label{display:block;font-size:12px;color:var(--muted2);margin:0 0 6px 2px}
+    input, select, textarea{
+      width:100%;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      padding:10px 10px;
+      outline:none;
+      font-size:14px;
+    }
+    textarea{min-height:94px;resize:vertical}
+    .tiny{font-size:11px;color:var(--muted2);margin-top:6px;line-height:1.35}
+    .checklist{
+      display:flex;flex-direction:column;gap:8px;
+    }
+    .checkItem{
+      display:flex;gap:10px;align-items:flex-start;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.04);
+      padding:9px 10px;border-radius:14px;
+    }
+    .checkItem input{width:18px;height:18px;margin-top:2px}
+    .checkText{font-size:13px;line-height:1.35}
+    .scoreBox{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.28);
+      padding:10px 12px;border-radius:14px;
+      margin-top:10px;
+    }
+    .scoreMain{font-weight:1000}
+    .scoreHint{color:var(--muted2);font-size:12px}
+    .scoreBadge{
+      font-weight:1000;
+      padding:6px 10px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      white-space:nowrap;
+    }
+    .scoreBadge.pass{border-color:rgba(25,195,125,.45);background:rgba(25,195,125,.14);color:#bff5df}
+    .scoreBadge.fail{border-color:rgba(255,77,79,.45);background:rgba(255,77,79,.12);color:#ffd2d2}
+    .modalFoot{
+      padding:12px 16px 16px 16px;
+      display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
+      border-top:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.18);
+    }
+    .warnLine{
+      color:rgba(255,240,180,.95);
+      font-size:12px;
+      background:rgba(255,204,0,.10);
+      border:1px solid rgba(255,204,0,.25);
+      padding:8px 10px;border-radius:12px;
+      display:none;
+    }
+    .warnLine.show{display:block}
+    .imgBox{
+      border:1px dashed rgba(255,255,255,.18);
+      border-radius:16px;
+      padding:10px;
+      background:rgba(255,255,255,.02);
+    }
+    .imgPrev{
+      width:100%;
+      height:260px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.25);
+      display:flex;align-items:center;justify-content:center;
+      overflow:hidden;
+      margin-top:10px;
+      color:var(--muted2);
+      font-size:12px;
+    }
+    .imgPrev img{width:100%;height:100%;object-fit:contain}
+    .imgActions{
+      display:flex;
+      gap:10px;
+      margin-top:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .hr{height:1px;background:rgba(255,255,255,.10);margin:10px 0}
+    .mutedLine{color:var(--muted2);font-size:12px;line-height:1.45}
+    .kbd{border:1px solid rgba(255,255,255,.18);padding:2px 6px;border-radius:8px;background:rgba(255,255,255,.06);font-size:11px;color:var(--muted)}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Trading Journal</h1>
+        <div class="sub" id="monthLabel">—</div>
+      </div>
+
+      <div class="topRight">
+        <div class="pill">Tap a day to view trades</div>
+        <div class="pill">P/L auto-sums per day</div>
+        <div class="pill">Saved on this device (localStorage)</div>
+        <button class="btn primary" id="btnNewTrade">+ New Trade</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Calendar -->
+      <div class="card">
+        <div class="cardHeader">
+          <div class="left">
+            <div class="monthTitle" id="calTitle">—</div>
+          </div>
+          <div class="navBtns">
+            <button class="btn small" id="btnPrev">◀</button>
+            <button class="btn small" id="btnToday">Today</button>
+            <button class="btn small" id="btnNext">▶</button>
+          </div>
+        </div>
+        <div class="helpRow">
+          <span class="kbd">Tip:</span> You can save trades even if checklist fails — it will just mark it “Low quality”.
+        </div>
+        <div class="calendar">
+          <div class="dow">
+            <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+          </div>
+          <div class="days" id="days"></div>
+        </div>
+      </div>
+
+      <!-- Details -->
+      <div class="card">
+        <div class="cardHeader">
+          <div class="left">
+            <div class="monthTitle" id="detailTitle">Select a day</div>
+          </div>
+          <div class="navBtns">
+            <button class="btn small" id="btnExport">Export</button>
+            <label class="btn small" style="cursor:pointer">
+              Import
+              <input id="importFile" type="file" accept="application/json" style="display:none" />
+            </label>
+          </div>
+        </div>
+        <div class="detail">
+          <div class="tip">Tap a date to see trades. Calendar shows your daily P/L total.</div>
+
+          <!-- DAY stats -->
+          <div class="summaryRow">
+            <div class="stat">
+              <div class="k">Day P/L</div>
+              <div class="v" id="dayPL">$0</div>
+            </div>
+            <div class="stat">
+              <div class="k">Trades</div>
+              <div class="v" id="dayCount">0</div>
+            </div>
+          </div>
+
+          <!-- WEEK stats -->
+          <div class="summaryRow">
+            <div class="stat">
+              <div class="k">Week P/L</div>
+              <div class="v" id="weekPL">$0</div>
+            </div>
+            <div class="stat">
+              <div class="k">Week Trades</div>
+              <div class="v" id="weekCount">0</div>
+            </div>
+          </div>
+
+          <!-- MONTH stats -->
+          <div class="summaryRow">
+            <div class="stat">
+              <div class="k">Month P/L</div>
+              <div class="v" id="monthPL">$0</div>
+            </div>
+            <div class="stat">
+              <div class="k">Month Trades</div>
+              <div class="v" id="monthCount">0</div>
+            </div>
+          </div>
+
+          <!-- YEAR stats -->
+          <div class="summaryRow">
+            <div class="stat">
+              <div class="k">Year P/L</div>
+              <div class="v" id="yearPL">$0</div>
+            </div>
+            <div class="stat">
+              <div class="k">Year Trades</div>
+              <div class="v" id="yearCount">0</div>
+            </div>
+          </div>
+
+          <div class="list" id="tradeList"></div>
+
+          <div class="hr"></div>
+          <div class="mutedLine">
+            <b>Sync across devices:</b> Export on iPad → send the file to yourself (iCloud Drive / AirDrop) → Import on the other device.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="overlay" id="overlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modalHead">
+        <h3 id="modalTitle">New Trade</h3>
+        <button class="btn small" id="btnClose">✕</button>
+      </div>
+
+      <div class="modalBody">
+        <div class="modalGrid">
+          <!-- LEFT: Screenshots + Basics -->
+          <div class="panel">
+
+            <!-- TWO SEPARATE SCREENSHOT BOXES + DELETE BUTTONS -->
+            <div class="panelTitle">Screenshots</div>
+
+            <div class="imgBox">
+              <label>Screenshot 1 (optional)</label>
+              <input type="file" id="shotFile1" accept="image/*" />
+              <div class="tiny">Upload your entry screenshot.</div>
+              <div class="imgPrev" id="shotPreview1">No screenshot yet</div>
+              <div class="imgActions">
+                <button class="btn tiny danger" id="btnClearShot1" type="button">Delete Screenshot 1</button>
+              </div>
+            </div>
+
+            <div class="imgBox" style="margin-top:10px">
+              <label>Screenshot 2 (optional)</label>
+              <input type="file" id="shotFile2" accept="image/*" />
+              <div class="tiny">Upload your exit/management screenshot.</div>
+              <div class="imgPrev" id="shotPreview2">No screenshot yet</div>
+              <div class="imgActions">
+                <button class="btn tiny danger" id="btnClearShot2" type="button">Delete Screenshot 2</button>
+              </div>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="panelTitle">Trade basics</div>
+            <div class="row2">
+              <div>
+                <label>Date</label>
+                <input type="date" id="fDate" />
+              </div>
+              <div>
+                <label>Time</label>
+                <input type="time" id="fTime" />
+              </div>
+            </div>
+
+            <div class="row2" style="margin-top:10px">
+              <div>
+                <label>Symbol</label>
+                <input id="fSymbol" placeholder="XAUUSD" value="XAUUSD" />
+              </div>
+              <div>
+                <label>Side</label>
+                <select id="fSide">
+                  <option value="Buy">Buy</option>
+                  <option value="Sell">Sell</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row2" style="margin-top:10px">
+              <div>
+                <label>Session</label>
+                <select id="fSession">
+                  <option>Asian</option>
+                  <option>London</option>
+                  <option>New York</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div>
+                <label>Lot size</label>
+                <input id="fLot" type="number" step="0.01" value="0.05" />
+              </div>
+            </div>
+
+            <div class="row2" style="margin-top:10px">
+              <div>
+                <label>P/L ($)</label>
+                <input id="fPL" type="number" step="0.01" placeholder="e.g. 25" />
+              </div>
+              <div>
+                <label>Points gained/lost</label>
+                <input id="fPoints" type="number" step="1" placeholder="e.g. 3187" />
+              </div>
+            </div>
+
+            <div class="row2" style="margin-top:10px">
+              <div>
+                <label>Stop loss (points)</label>
+                <input id="fSL" type="number" step="1" placeholder="e.g. 250" />
+              </div>
+              <div>
+                <label>Take profit (points)</label>
+                <input id="fTP" type="number" step="1" placeholder="e.g. 600" />
+              </div>
+            </div>
+
+            <div class="row2" style="margin-top:10px">
+              <div>
+                <label>Break-even moved at (points)</label>
+                <input id="fBE" type="number" step="1" placeholder="e.g. 200" />
+              </div>
+              <div>
+                <label>Trade taken anyway?</label>
+                <select id="fOverride">
+                  <option value="No">No (follow checklist)</option>
+                  <option value="Yes">Yes (manual override)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="tiny" style="margin-top:8px">
+              Even if checklist fails, you can still save. We’ll mark it as “Low quality” so you can review later.
+            </div>
+          </div>
+
+          <!-- RIGHT: Checklist + Reflection -->
+          <div class="panel">
+            <div class="panelTitle">Entry Checklist (score rule)</div>
+            <div class="mutedLine">
+              Rule: <b>Pass if 6/10+</b>. If less than that, it will show “DON’T ENTER” — but you can still save if you want.
+            </div>
+
+            <div class="checklist" id="checklist"></div>
+
+            <div class="scoreBox">
+              <div>
+                <div class="scoreMain" id="scoreMain">Score: 0 / 10</div>
+                <div class="scoreHint" id="scoreHint">Recommendation: —</div>
+              </div>
+              <div class="scoreBadge fail" id="scoreBadge">DON'T ENTER</div>
+            </div>
+
+            <div class="warnLine" id="warnLine">
+              Checklist failed. If you still take it, set <b>Manual override = Yes</b> (left side) or accept it as low-quality.
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="panelTitle">Entry notes (optional)</div>
+            <label>Extra entry reason notes (optional)</label>
+            <input id="fEntryNotes" placeholder="e.g. Sweep + rejection + BOS retest (extra context)" />
+
+            <div class="hr"></div>
+
+            <div class="panelTitle">Timeframes used</div>
+            <div class="row2">
+              <div>
+                <label>TF 1</label>
+                <select id="tf1">
+                  <option value="">—</option>
+                  <option>1m</option><option>3m</option><option>5m</option><option>15m</option><option>30m</option><option>1H</option><option>4H</option><option>Daily</option>
+                </select>
+              </div>
+              <div>
+                <label>TF 2</label>
+                <select id="tf2">
+                  <option value="">—</option>
+                  <option>1m</option><option>3m</option><option>5m</option><option>15m</option><option>30m</option><option>1H</option><option>4H</option><option>Daily</option>
+                </select>
+              </div>
+            </div>
+            <div class="row2" style="margin-top:10px">
+              <div>
+                <label>TF 3</label>
+                <select id="tf3">
+                  <option value="">—</option>
+                  <option>1m</option><option>3m</option><option>5m</option><option>15m</option><option>30m</option><option>1H</option><option>4H</option><option>Daily</option>
+                </select>
+              </div>
+              <div>
+                <label>TF 4</label>
+                <select id="tf4">
+                  <option value="">—</option>
+                  <option>1m</option><option>3m</option><option>5m</option><option>15m</option><option>30m</option><option>1H</option><option>4H</option><option>Daily</option>
+                </select>
+              </div>
+            </div>
+            <div class="row2" style="margin-top:10px">
+              <div>
+                <label>TF 5</label>
+                <select id="tf5">
+                  <option value="">—</option>
+                  <option>1m</option><option>3m</option><option>5m</option><option>15m</option><option>30m</option><option>1H</option><option>4H</option><option>Daily</option>
+                </select>
+              </div>
+              <div>
+                <label>TF alignment note (optional)</label>
+                <input id="tfNote" placeholder="e.g. 30m + 5m aligned, entered on 1m" />
+              </div>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="panelTitle">Personal reflection</div>
+            <label>What did I do right?</label>
+            <textarea id="rRight" placeholder="Write what you did right."></textarea>
+
+            <label style="margin-top:10px">What did I do wrong?</label>
+            <textarea id="rWrong" placeholder="Write what you did wrong."></textarea>
+
+            <label style="margin-top:10px">Next time, remember…</label>
+            <textarea id="rNext" placeholder="Rules for next time."></textarea>
+
+            <label style="margin-top:10px">Notes (anything else)</label>
+            <textarea id="rNote" placeholder="Extra notes."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="modalFoot">
+        <button class="btn danger" id="btnDelete" style="display:none">Delete</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;flex:1">
+          <button class="btn" id="btnCancel">Cancel</button>
+          <button class="btn primary" id="btnSave">Save Trade</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =========================
+   Storage + helpers
+========================= */
+const LS_KEY = "bhumi_trading_journal_v1";
+function loadAll(){
+  try{ return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); }
+  catch(e){ return []; }
+}
+function saveAll(trades){
+  localStorage.setItem(LS_KEY, JSON.stringify(trades));
+}
+function money(n){
+  const v = Number(n || 0);
+  return (v>=0? "$" : "-$") + Math.abs(v).toFixed(2);
+}
+function isoDate(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const da = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${da}`;
+}
+function fmtDateLabel(iso){
+  const d = new Date(iso+"T00:00:00");
+  return d.toLocaleDateString(undefined, {weekday:"short", day:"numeric", month:"short", year:"numeric"});
+}
+
+/* Range helpers */
+function dateToUTC(iso){
+  return new Date(iso + "T00:00:00Z");
+}
+function isBetweenInclusive(iso, startISO, endISO){
+  const t = dateToUTC(iso).getTime();
+  return t >= dateToUTC(startISO).getTime() && t <= dateToUTC(endISO).getTime();
+}
+function weekRangeFromISO(anyISO){
+  const d = new Date(anyISO + "T00:00:00");
+  const dow = (d.getDay()+6)%7; // 0=Mon
+  const start = new Date(d);
+  start.setDate(d.getDate() - dow);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return { startISO: isoDate(start), endISO: isoDate(end) };
+}
+function monthRangeFromISO(anyISO){
+  const d = new Date(anyISO + "T00:00:00");
+  const start = new Date(d.getFullYear(), d.getMonth(), 1);
+  const end = new Date(d.getFullYear(), d.getMonth()+1, 0);
+  return { startISO: isoDate(start), endISO: isoDate(end) };
+}
+function yearRangeFromISO(anyISO){
+  const d = new Date(anyISO + "T00:00:00");
+  const start = new Date(d.getFullYear(), 0, 1);
+  const end = new Date(d.getFullYear(), 11, 31);
+  return { startISO: isoDate(start), endISO: isoDate(end) };
+}
+function sumPLInRange(startISO, endISO){
+  let s = 0;
+  let c = 0;
+  for(const t of trades){
+    if(t?.date && isBetweenInclusive(t.date, startISO, endISO)){
+      s += Number(t.pl || 0);
+      c += 1;
+    }
+  }
+  return { pl: s, count: c };
+}
+
+/* =========================
+   Calendar state
+========================= */
+let trades = loadAll();
+let view = new Date();
+let selectedDateISO = isoDate(new Date());
+let editingId = null;
+const daysEl = document.getElementById("days");
+
+/* =========================
+   Checklist definition
+========================= */
+const checklistItems = [
+  { id:"liq", textBuy:"Liquidity sweep + rejection confirms buyers", textSell:"Liquidity sweep + rejection confirms sellers" },
+  { id:"structure", textBuy:"1m structure flips bullish (BOS/CHOCH) BEFORE entry", textSell:"1m structure flips bearish (BOS/CHOCH) BEFORE entry" },
+  { id:"retest", textBuy:"Retest holds (no immediate invalidation)", textSell:"Retest holds (no immediate invalidation)" },
+  { id:"ema", textBuy:"EMAs aligned for direction (not tangled)", textSell:"EMAs aligned for direction (not tangled)" },
+  { id:"momentum", textBuy:"Momentum candle / displacement confirms move", textSell:"Momentum candle / displacement confirms move" },
+  { id:"rr", textBuy:"RR is acceptable (>= 1.5R or clear TP plan)", textSell:"RR is acceptable (>= 1.5R or clear TP plan)" },
+  { id:"news", textBuy:"No high-impact news in next ~10 min", textSell:"No high-impact news in next ~10 min" },
+  { id:"level", textBuy:"Entry is not into major resistance", textSell:"Entry is not into major support" },
+  { id:"risk", textBuy:"SL is logical + position size is controlled", textSell:"SL is logical + position size is controlled" },
+  { id:"plan", textBuy:"I know BE / trail plan before I click", textSell:"I know BE / trail plan before I click" },
+];
+
+function buildChecklist(){
+  const side = document.getElementById("fSide").value;
+  const box = document.getElementById("checklist");
+  box.innerHTML = "";
+  checklistItems.forEach((it)=>{
+    const row = document.createElement("label");
+    row.className = "checkItem";
+    row.innerHTML = `
+      <input type="checkbox" data-cid="${it.id}">
+      <div class="checkText">${side === "Buy" ? it.textBuy : it.textSell}</div>
+    `;
+    box.appendChild(row);
+  });
+  box.querySelectorAll("input[type=checkbox]").forEach(cb=>{
+    cb.addEventListener("change", updateScoreUI);
+  });
+  updateScoreUI();
+}
+function getChecklistState(){
+  const box = document.getElementById("checklist");
+  const out = {};
+  box.querySelectorAll("input[type=checkbox]").forEach(cb=>{ out[cb.dataset.cid] = cb.checked; });
+  return out;
+}
+function setChecklistState(state){
+  const box = document.getElementById("checklist");
+  box.querySelectorAll("input[type=checkbox]").forEach(cb=>{ cb.checked = !!state?.[cb.dataset.cid]; });
+  updateScoreUI();
+}
+function scoreChecklist(state){
+  let score = 0;
+  for(const k in state) if(state[k]) score++;
+  return score;
+}
+function updateScoreUI(){
+  const state = getChecklistState();
+  const score = scoreChecklist(state);
+  const pass = score >= 6;
+  const side = document.getElementById("fSide").value;
+  const main = document.getElementById("scoreMain");
+  const hint = document.getElementById("scoreHint");
+  const badge = document.getElementById("scoreBadge");
+  const warn = document.getElementById("warnLine");
+
+  main.textContent = `Score: ${score} / 10`;
+  hint.textContent = pass ? `Recommendation: ENTER (${side})` : `Recommendation: DON'T ENTER (${side})`;
+
+  badge.textContent = pass ? "ENTER" : "DON'T ENTER";
+  badge.classList.toggle("pass", pass);
+  badge.classList.toggle("fail", !pass);
+
+  warn.classList.toggle("show", !pass);
+}
+
+/* =========================
+   Calendar rendering
+========================= */
+function sumPLForDay(dateISO){
+  let s = 0;
+  for(const t of trades){
+    if(t.date === dateISO) s += Number(t.pl || 0);
+  }
+  return s;
+}
+function renderHeader(){
+  const monthName = view.toLocaleDateString(undefined, {month:"long", year:"numeric"});
+  document.getElementById("calTitle").textContent = monthName;
+  document.getElementById("monthLabel").textContent = monthName;
+}
+function renderCalendar(){
+  renderHeader();
+  daysEl.innerHTML = "";
+
+  const first = new Date(view.getFullYear(), view.getMonth(), 1);
+  const last = new Date(view.getFullYear(), view.getMonth()+1, 0);
+  const firstDow = (first.getDay()+6)%7; // 0=Mon
+  const totalDays = last.getDate();
+
+  const prevLast = new Date(view.getFullYear(), view.getMonth(), 0).getDate();
+  for(let i=0;i<firstDow;i++){
+    const dNum = prevLast - (firstDow-1-i);
+    daysEl.appendChild(dayCell(null, dNum, true));
+  }
+
+  for(let d=1; d<=totalDays; d++){
+    const dateISO = isoDate(new Date(view.getFullYear(), view.getMonth(), d));
+    daysEl.appendChild(dayCell(dateISO, d, false));
+  }
+
+  const cellsNow = daysEl.children.length;
+  const add = (7 - (cellsNow % 7)) % 7;
+  for(let i=1;i<=add;i++){
+    daysEl.appendChild(dayCell(null, i, true));
+  }
+}
+function dayCell(dateISO, num, isOtherMonth){
+  const div = document.createElement("div");
+  div.className = "day" + (isOtherMonth ? " muted" : "");
+  div.innerHTML = `<div class="dayNum">${num}</div>`;
+
+  if(!isOtherMonth && dateISO){
+    const pl = sumPLForDay(dateISO);
+    if(pl !== 0){
+      const pill = document.createElement("div");
+      pill.className = "pl " + (pl>=0 ? "good":"bad");
+      pill.textContent = (pl>=0? "+":"") + money(pl).replace("$","");
+      div.appendChild(pill);
+    }
+
+    const todayISO = isoDate(new Date());
+    if(dateISO === todayISO){
+      const ring = document.createElement("div");
+      ring.className = "todayRing";
+      div.appendChild(ring);
+    }
+    if(dateISO === selectedDateISO){
+      const ring2 = document.createElement("div");
+      ring2.className = "selectedRing";
+      div.appendChild(ring2);
+    }
+
+    div.addEventListener("click", ()=>{
+      selectedDateISO = dateISO;
+      renderCalendar();
+      renderDayDetail();
+    });
+  }
+  return div;
+}
+
+/* =========================
+   Day detail list + totals
+========================= */
+function renderDayDetail(){
+  document.getElementById("detailTitle").textContent = fmtDateLabel(selectedDateISO);
+
+  const dayPL = sumPLForDay(selectedDateISO);
+  const dayTrades = trades.filter(t => t.date === selectedDateISO)
+    .sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+
+  document.getElementById("dayPL").textContent = money(dayPL);
+  document.getElementById("dayCount").textContent = String(dayTrades.length);
+
+  const wr = weekRangeFromISO(selectedDateISO);
+  const ws = sumPLInRange(wr.startISO, wr.endISO);
+  document.getElementById("weekPL").textContent = money(ws.pl);
+  document.getElementById("weekCount").textContent = String(ws.count);
+
+  const mr = monthRangeFromISO(selectedDateISO);
+  const ms = sumPLInRange(mr.startISO, mr.endISO);
+  document.getElementById("monthPL").textContent = money(ms.pl);
+  document.getElementById("monthCount").textContent = String(ms.count);
+
+  const yr = yearRangeFromISO(selectedDateISO);
+  const ys = sumPLInRange(yr.startISO, yr.endISO);
+  document.getElementById("yearPL").textContent = money(ys.pl);
+  document.getElementById("yearCount").textContent = String(ys.count);
+
+  const list = document.getElementById("tradeList");
+  list.innerHTML = "";
+
+  if(dayTrades.length === 0){
+    const empty = document.createElement("div");
+    empty.className = "mutedLine";
+    empty.textContent = "No trades yet for this day. Tap “+ New Trade”.";
+    list.appendChild(empty);
+    return;
+  }
+
+  dayTrades.forEach(t=>{
+    const item = document.createElement("div");
+    item.className = "tradeItem";
+    const plNum = Number(t.pl||0);
+    item.innerHTML = `
+      <div class="tLeft">
+        <div class="tTop">
+          <span class="badge ${t.side === "Buy" ? "buy":"sell"}">${t.side}</span>
+          <span class="badge">${t.symbol || "—"}</span>
+          <span class="badge">${t.session || "—"}</span>
+          <span class="badge">${t.time || ""}</span>
+          ${t.quality === "low" ? `<span class="badge" style="border-color:rgba(255,204,0,.35);background:rgba(255,204,0,.10);color:rgba(255,240,180,.95)">Low quality</span>` : ``}
+          ${(t.screenshot1 || t.screenshot2) ? `<span class="badge" style="border-color:rgba(120,170,255,.35);background:rgba(120,170,255,.10);color:rgba(234,240,255,.85)">📷</span>` : ``}
+        </div>
+        <div class="tMeta">
+          Points: ${t.points ?? "—"} · SL: ${t.sl ?? "—"} · TP: ${t.tp ?? "—"} · BE: ${t.be ?? "—"}
+        </div>
+      </div>
+      <div class="tPL ${plNum>=0?"good":"bad"}">${money(plNum)}</div>
+    `;
+    item.addEventListener("click", ()=> openModal(t.id));
+    list.appendChild(item);
+  });
+}
+
+/* =========================
+   Modal logic
+========================= */
+const overlay = document.getElementById("overlay");
+
+let currentShot1DataUrl = null;
+let currentShot2DataUrl = null;
+
+/* If user clicks delete, we must store null even if old exists */
+let shot1Cleared = false;
+let shot2Cleared = false;
+
+function openModal(id=null){
+  editingId = id;
+  document.getElementById("btnDelete").style.display = id ? "inline-block" : "none";
+  document.getElementById("modalTitle").textContent = id ? "Edit Trade" : "New Trade";
+
+  const now = new Date();
+  document.getElementById("fDate").value = selectedDateISO || isoDate(now);
+  document.getElementById("fTime").value = String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
+  document.getElementById("fSymbol").value = "XAUUSD";
+  document.getElementById("fSide").value = "Buy";
+  document.getElementById("fSession").value = "Asian";
+  document.getElementById("fLot").value = "0.05";
+  document.getElementById("fPL").value = "";
+  document.getElementById("fPoints").value = "";
+  document.getElementById("fSL").value = "";
+  document.getElementById("fTP").value = "";
+  document.getElementById("fBE").value = "";
+  document.getElementById("fOverride").value = "No";
+  document.getElementById("fEntryNotes").value = "";
+  document.getElementById("tf1").value = "";
+  document.getElementById("tf2").value = "";
+  document.getElementById("tf3").value = "";
+  document.getElementById("tf4").value = "";
+  document.getElementById("tf5").value = "";
+  document.getElementById("tfNote").value = "";
+  document.getElementById("rRight").value = "";
+  document.getElementById("rWrong").value = "";
+  document.getElementById("rNext").value = "";
+  document.getElementById("rNote").value = "";
+
+  currentShot1DataUrl = null;
+  currentShot2DataUrl = null;
+  shot1Cleared = false;
+  shot2Cleared = false;
+
+  setShotPreview(1, null);
+  setShotPreview(2, null);
+  document.getElementById("shotFile1").value = "";
+  document.getElementById("shotFile2").value = "";
+
+  buildChecklist();
+
+  if(id){
+    const t = trades.find(x=>x.id===id);
+    if(t){
+      document.getElementById("fDate").value = t.date || selectedDateISO;
+      document.getElementById("fTime").value = t.time || "";
+      document.getElementById("fSymbol").value = t.symbol || "";
+      document.getElementById("fSide").value = t.side || "Buy";
+      document.getElementById("fSession").value = t.session || "Asian";
+      document.getElementById("fLot").value = t.lot ?? "0.05";
+      document.getElementById("fPL").value = t.pl ?? "";
+      document.getElementById("fPoints").value = t.points ?? "";
+      document.getElementById("fSL").value = t.sl ?? "";
+      document.getElementById("fTP").value = t.tp ?? "";
+      document.getElementById("fBE").value = t.be ?? "";
+      document.getElementById("fOverride").value = t.override ?? "No";
+      document.getElementById("fEntryNotes").value = t.entryNotes ?? "";
+
+      document.getElementById("tf1").value = t.tfs?.[0] || "";
+      document.getElementById("tf2").value = t.tfs?.[1] || "";
+      document.getElementById("tf3").value = t.tfs?.[2] || "";
+      document.getElementById("tf4").value = t.tfs?.[3] || "";
+      document.getElementById("tf5").value = t.tfs?.[4] || "";
+      document.getElementById("tfNote").value = t.tfNote ?? "";
+
+      document.getElementById("rRight").value = t.refRight ?? "";
+      document.getElementById("rWrong").value = t.refWrong ?? "";
+      document.getElementById("rNext").value = t.refNext ?? "";
+      document.getElementById("rNote").value = t.refNote ?? "";
+
+      buildChecklist();
+      setChecklistState(t.checklist || {});
+
+      setShotPreview(1, t.screenshot1 || null);
+      setShotPreview(2, t.screenshot2 || null);
+    }
+  }
+
+  overlay.classList.add("show");
+}
+function closeModal(){
+  overlay.classList.remove("show");
+  editingId = null;
+}
+
+function setShotPreview(slot, dataUrl){
+  const box = document.getElementById(slot === 1 ? "shotPreview1" : "shotPreview2");
+  box.innerHTML = "";
+  if(!dataUrl){ box.textContent = "No screenshot yet"; return; }
+  const img = document.createElement("img");
+  img.src = dataUrl;
+  box.appendChild(img);
+}
+
+/* Upload listeners */
+document.getElementById("shotFile1").addEventListener("change", (e)=>{
+  const file = e.target.files?.[0];
+  if(!file){ currentShot1DataUrl = null; setShotPreview(1, null); return; }
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    currentShot1DataUrl = reader.result;
+    shot1Cleared = false; // user is replacing, not clearing
+    setShotPreview(1, currentShot1DataUrl);
+  };
+  reader.readAsDataURL(file);
+});
+document.getElementById("shotFile2").addEventListener("change", (e)=>{
+  const file = e.target.files?.[0];
+  if(!file){ currentShot2DataUrl = null; setShotPreview(2, null); return; }
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    currentShot2DataUrl = reader.result;
+    shot2Cleared = false;
+    setShotPreview(2, currentShot2DataUrl);
+  };
+  reader.readAsDataURL(file);
+});
+
+/* Delete screenshot buttons */
+document.getElementById("btnClearShot1").addEventListener("click", ()=>{
+  const ok = confirm("Remove Screenshot 1 from this trade?");
+  if(!ok) return;
+  currentShot1DataUrl = null;
+  shot1Cleared = true;
+  document.getElementById("shotFile1").value = "";
+  setShotPreview(1, null);
+});
+document.getElementById("btnClearShot2").addEventListener("click", ()=>{
+  const ok = confirm("Remove Screenshot 2 from this trade?");
+  if(!ok) return;
+  currentShot2DataUrl = null;
+  shot2Cleared = true;
+  document.getElementById("shotFile2").value = "";
+  setShotPreview(2, null);
+});
+
+/* Side changes update checklist text */
+document.getElementById("fSide").addEventListener("change", ()=>{
+  const prevState = getChecklistState();
+  buildChecklist();
+  setChecklistState(prevState);
+});
+
+function uuid(){
+  return Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
+}
+
+document.getElementById("btnSave").addEventListener("click", ()=>{
+  const date = document.getElementById("fDate").value || selectedDateISO;
+  const time = document.getElementById("fTime").value || "";
+  const symbol = document.getElementById("fSymbol").value.trim() || "XAUUSD";
+  const side = document.getElementById("fSide").value;
+  const session = document.getElementById("fSession").value;
+  const lot = document.getElementById("fLot").value;
+  const pl = document.getElementById("fPL").value;
+  const points = document.getElementById("fPoints").value;
+  const sl = document.getElementById("fSL").value;
+  const tp = document.getElementById("fTP").value;
+  const be = document.getElementById("fBE").value;
+  const override = document.getElementById("fOverride").value;
+  const entryNotes = document.getElementById("fEntryNotes").value.trim();
+
+  const tfs = [
+    document.getElementById("tf1").value,
+    document.getElementById("tf2").value,
+    document.getElementById("tf3").value,
+    document.getElementById("tf4").value,
+    document.getElementById("tf5").value,
+  ].filter(Boolean);
+
+  const tfNote = document.getElementById("tfNote").value.trim();
+
+  const checklist = getChecklistState();
+  const score = scoreChecklist(checklist);
+  const pass = score >= 6;
+
+  const refRight = document.getElementById("rRight").value.trim();
+  const refWrong = document.getElementById("rWrong").value.trim();
+  const refNext = document.getElementById("rNext").value.trim();
+  const refNote = document.getElementById("rNote").value.trim();
+
+  const quality = (pass || override==="Yes") ? "ok" : "low";
+
+  const existing = editingId ? (trades.find(x=>x.id===editingId) || {}) : {};
+
+  const finalShot1 =
+    shot1Cleared ? null :
+    (currentShot1DataUrl || existing.screenshot1 || null);
+
+  const finalShot2 =
+    shot2Cleared ? null :
+    (currentShot2DataUrl || existing.screenshot2 || null);
+
+  const obj = {
+    id: editingId || uuid(),
+    date, time, symbol, side, session,
+    lot: lot === "" ? null : Number(lot),
+    pl: pl === "" ? 0 : Number(pl),
+    points: points === "" ? null : Number(points),
+    sl: sl === "" ? null : Number(sl),
+    tp: tp === "" ? null : Number(tp),
+    be: be === "" ? null : Number(be),
+    override,
+    checklist,
+    checklistScore: score,
+    quality,
+    entryNotes,
+    tfs,
+    tfNote,
+    refRight, refWrong, refNext, refNote,
+    screenshot1: finalShot1,
+    screenshot2: finalShot2,
+    updatedAt: Date.now()
+  };
+
+  if(editingId){
+    trades = trades.map(t => t.id===editingId ? obj : t);
+  }else{
+    trades.push(obj);
+  }
+
+  saveAll(trades);
+  selectedDateISO = date;
+  renderCalendar();
+  renderDayDetail();
+  closeModal();
+});
+
+document.getElementById("btnDelete").addEventListener("click", ()=>{
+  if(!editingId) return;
+  const ok = confirm("Delete this trade?");
+  if(!ok) return;
+  trades = trades.filter(t=>t.id!==editingId);
+  saveAll(trades);
+  renderCalendar();
+  renderDayDetail();
+  closeModal();
+});
+
+/* Buttons */
+document.getElementById("btnNewTrade").addEventListener("click", ()=>openModal(null));
+document.getElementById("btnClose").addEventListener("click", closeModal);
+document.getElementById("btnCancel").addEventListener("click", closeModal);
+overlay.addEventListener("click", (e)=>{ if(e.target===overlay) closeModal(); });
+
+document.getElementById("btnPrev").addEventListener("click", ()=>{
+  view = new Date(view.getFullYear(), view.getMonth()-1, 1);
+  renderCalendar();
+});
+document.getElementById("btnNext").addEventListener("click", ()=>{
+  view = new Date(view.getFullYear(), view.getMonth()+1, 1);
+  renderCalendar();
+});
+document.getElementById("btnToday").addEventListener("click", ()=>{
+  const now = new Date();
+  view = new Date(now.getFullYear(), now.getMonth(), 1);
+  selectedDateISO = isoDate(now);
+  renderCalendar();
+  renderDayDetail();
+});
+
+/* Export / Import */
+document.getElementById("btnExport").addEventListener("click", ()=>{
+  const data = { exportedAt: new Date().toISOString(), trades: trades };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `trading-journal-export-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById("importFile").addEventListener("change", (e)=>{
+  const file = e.target.files?.[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const parsed = JSON.parse(reader.result);
+      const incoming = parsed.trades || parsed;
+      if(!Array.isArray(incoming)) throw new Error("Invalid import");
+      const map = new Map(trades.map(t=>[t.id,t]));
+      incoming.forEach(t=>{ if(t && t.id) map.set(t.id, t); });
+      trades = Array.from(map.values());
+      saveAll(trades);
+      renderCalendar();
+      renderDayDetail();
+      alert("Import successful ✅");
+    }catch(err){
+      alert("Import failed. Please import a valid JSON export file.");
+    }
+    e.target.value = "";
+  };
+  reader.readAsText(file);
+});
+
+/* Init */
+(function init(){
+  const now = new Date();
+  view = new Date(now.getFullYear(), now.getMonth(), 1);
+  selectedDateISO = isoDate(now);
+  renderCalendar();
+  renderDayDetail();
+})();
+</script>
+</body>
+</html>
