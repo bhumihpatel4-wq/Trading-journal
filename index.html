@@ -364,7 +364,9 @@
         <div class="authSub">
           Only Bhumi can access this. Login with your email + password.
           <br><br>
-          If you see a blank page after deploy, it’s usually an <b>Authorized Domains</b> issue (fix is below).
+          If login fails with <b>auth/unauthorized-domain</b>:
+          <br>
+          Firebase Console → Authentication → Settings → Authorized domains → add your GitHub domain.
         </div>
       </div>
       <div class="authBody">
@@ -751,14 +753,14 @@
       orderBy
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-    // ✅ PASTE YOUR FIREBASE CONFIG HERE (Firebase Console → Project settings → Your apps → Config)
+    // ✅ REAL FIREBASE CONFIG (your project)
     const firebaseConfig = {
-      apiKey: "PASTE_HERE",
-      authDomain: "PASTE_HERE",
-      projectId: "PASTE_HERE",
-      storageBucket: "PASTE_HERE",
-      messagingSenderId: "PASTE_HERE",
-      appId: "PASTE_HERE"
+      apiKey: "AIzaSyAhNKfiQxN3dK_6u8V1g2Zvf54XVpduMFM",
+      authDomain: "bhumi-trading-journal.firebaseapp.com",
+      projectId: "bhumi-trading-journal",
+      storageBucket: "bhumi-trading-journal.firebasestorage.app",
+      messagingSenderId: "980506785300",
+      appId: "1:980506785300:web:be4d1a37540e6443161901"
     };
 
     const BHUMI_UID = "OdAMMQ3g2ifksjQY8u1DVT74cnR2";
@@ -816,14 +818,15 @@
 
       try{
         await signInWithEmailAndPassword(auth, email, pass);
-        // onAuthStateChanged will handle UI + UID lock
       }catch(e){
-        // Common issue: auth domain not authorized
         showAuthError(
           "Login failed.\n\n" +
           (e?.message || String(e)) +
           "\n\nIf it mentions 'auth/unauthorized-domain':\n" +
-          "Firebase Console → Authentication → Settings → Authorized domains → add your hosting domain."
+          "Firebase Console → Authentication → Settings → Authorized domains → add your hosting domain.\n\n" +
+          "For GitHub pages it should be:\n" +
+          "- bhumihpatel4-wq.github.io\n" +
+          "- (and) github.io"
         );
       }
     });
@@ -1414,7 +1417,6 @@
           const parsed = JSON.parse(reader.result);
           const incoming = parsed.trades || parsed;
           if(!Array.isArray(incoming)) throw new Error("Invalid import");
-          // Upsert each trade into Firestore
           for(const t of incoming){
             if(t && t.id){
               t.updatedAt = Date.now();
@@ -1453,7 +1455,6 @@
       currentUser = user;
       userPill.textContent = `Logged in: ${user.email}`;
 
-      // Start app
       showApp();
       startTradesListener();
 
