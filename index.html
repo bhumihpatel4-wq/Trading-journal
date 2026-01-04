@@ -260,17 +260,17 @@
     }
     textarea{min-height:94px;resize:vertical}
     .tiny{font-size:11px;color:var(--muted2);margin-top:6px;line-height:1.35}
-
+    .checklist{
+      display:flex;flex-direction:column;gap:8px;
+    }
     .checkItem{
       display:flex;gap:10px;align-items:flex-start;
       border:1px solid rgba(255,255,255,.10);
       background:rgba(255,255,255,.04);
       padding:9px 10px;border-radius:14px;
-      margin-bottom:10px;
     }
-    .checkItem input[type="checkbox"]{width:18px;height:18px;margin-top:2px}
+    .checkItem input{width:18px;height:18px;margin-top:2px}
     .checkText{font-size:13px;line-height:1.35}
-
     .scoreBox{
       display:flex;align-items:center;justify-content:space-between;gap:10px;
       border:1px solid rgba(255,255,255,.12);
@@ -452,7 +452,7 @@
     </div>
   </div>
 
-  <!-- Modal -->
+  <!-- Trade Modal -->
   <div class="overlay" id="overlay">
     <div class="modal" role="dialog" aria-modal="true">
       <div class="modalHead">
@@ -462,7 +462,7 @@
 
       <div class="modalBody">
         <div class="modalGrid">
-          <!-- LEFT: Screenshots + Basics -->
+          <!-- LEFT -->
           <div class="panel">
 
             <div class="panelTitle">Screenshots</div>
@@ -572,51 +572,32 @@
             </div>
           </div>
 
-          <!-- RIGHT: ONE checklist only + reflection -->
+          <!-- RIGHT -->
           <div class="panel">
-            <div class="panelTitle">Checklist (editable)</div>
-
-            <div class="imgBox" style="margin-bottom:10px">
-              <div class="row2">
-                <div>
-                  <label>New item (Buy text)</label>
-                  <input id="newBuyText" placeholder="e.g. Daily high / daily low respected" />
-                </div>
-                <div>
-                  <label>New item (Sell text)</label>
-                  <input id="newSellText" placeholder="e.g. Daily high / daily low respected" />
-                </div>
-              </div>
-
-              <div class="imgActions" style="justify-content:flex-start;margin-top:10px">
-                <button class="btn tiny" type="button" id="btnAddChecklistItem">+ Add item</button>
-                <button class="btn tiny danger" type="button" id="btnResetChecklist">Reset to default</button>
-              </div>
-
-              <div class="tiny" style="margin-top:8px">
-                One checklist only: tick + edit + delete here. (Like Apple Reminders.)
-              </div>
-
-              <div class="hr"></div>
-
-              <!-- ONLY checklist UI -->
-              <div id="checklistList"></div>
-
-              <div class="scoreBox" style="margin-top:10px">
-                <div>
-                  <div class="scoreMain" id="scoreMain">Score: 0 / 0</div>
-                  <div class="scoreHint" id="scoreHint">Recommendation: —</div>
-                  <div class="mutedLine" id="ruleLine" style="margin-top:6px">
-                    Rule: Pass if 60% checked (auto-adjusts).
-                  </div>
-                </div>
-                <div class="scoreBadge fail" id="scoreBadge">DON'T ENTER</div>
-              </div>
-
-              <div class="warnLine" id="warnLine" style="margin-top:10px">
-                Checklist failed. If you still take it, set <b>Manual override = Yes</b> (left side) or accept it as low-quality.
-              </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <div class="panelTitle" style="margin:0">Entry Checklist (score rule)</div>
+              <button class="btn tiny" id="btnEditChecklist" type="button">Edit</button>
             </div>
+
+            <div class="mutedLine">
+              Rule: <b>Pass if ~60%</b> (auto scales when you add/remove items).
+            </div>
+
+            <div class="checklist" id="checklist"></div>
+
+            <div class="scoreBox">
+              <div>
+                <div class="scoreMain" id="scoreMain">Score: 0 / 0</div>
+                <div class="scoreHint" id="scoreHint">Recommendation: —</div>
+              </div>
+              <div class="scoreBadge fail" id="scoreBadge">DON'T ENTER</div>
+            </div>
+
+            <div class="warnLine" id="warnLine">
+              Checklist failed. If you still take it, set <b>Manual override = Yes</b> (left side) or accept it as low-quality.
+            </div>
+
+            <div class="hr"></div>
 
             <div class="panelTitle">Entry notes (optional)</div>
             <label>Extra entry reason notes (optional)</label>
@@ -699,6 +680,41 @@
     </div>
   </div>
 
+  <!-- Checklist Editor Modal -->
+  <div class="overlay" id="clOverlay">
+    <div class="modal" role="dialog" aria-modal="true" style="width:min(900px,100%)">
+      <div class="modalHead">
+        <h3>Edit Checklist</h3>
+        <button class="btn small" id="btnCloseChecklist">✕</button>
+      </div>
+
+      <div class="modalBody">
+        <div class="mutedLine" style="margin-bottom:10px">
+          Add / edit items here. This saves on this device (localStorage).  
+          Scoring auto adapts to checklist length.
+        </div>
+
+        <div class="panel">
+          <div class="panelTitle">Checklist items</div>
+
+          <div id="clList" style="display:flex;flex-direction:column;gap:10px"></div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;justify-content:space-between">
+            <button class="btn" id="btnAddChecklistItem" type="button">+ Add item</button>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">
+              <button class="btn danger" id="btnResetChecklist" type="button">Reset to default</button>
+              <button class="btn primary" id="btnSaveChecklist" type="button">Save Checklist</button>
+            </div>
+          </div>
+
+          <div class="tiny" style="margin-top:10px">
+            Tip: For items that are the same for Buy/Sell, write the same text in both fields.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 <script>
 /* =========================
    Storage + helpers
@@ -725,19 +741,9 @@ function fmtDateLabel(iso){
   const d = new Date(iso+"T00:00:00");
   return d.toLocaleDateString(undefined, {weekday:"short", day:"numeric", month:"short", year:"numeric"});
 }
-function escapeHtml(str){
-  return String(str || "")
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
-}
 
 /* Range helpers */
-function dateToUTC(iso){
-  return new Date(iso + "T00:00:00Z");
-}
+function dateToUTC(iso){ return new Date(iso + "T00:00:00Z"); }
 function isBetweenInclusive(iso, startISO, endISO){
   const t = dateToUTC(iso).getTime();
   return t >= dateToUTC(startISO).getTime() && t <= dateToUTC(endISO).getTime();
@@ -763,7 +769,6 @@ function yearRangeFromISO(anyISO){
   const end = new Date(d.getFullYear(), 11, 31);
   return { startISO: isoDate(start), endISO: isoDate(end) };
 }
-let trades = loadAll();
 function sumPLInRange(startISO, endISO){
   let s = 0;
   let c = 0;
@@ -779,64 +784,86 @@ function sumPLInRange(startISO, endISO){
 /* =========================
    Calendar state
 ========================= */
+let trades = loadAll();
 let view = new Date();
 let selectedDateISO = isoDate(new Date());
 let editingId = null;
 const daysEl = document.getElementById("days");
 
 /* =========================
-   ONE editable checklist (no duplicate)
+   Checklist definition (editable + saved)
 ========================= */
-const CHECKLIST_LS_KEY = "bhumi_trading_journal_checklist_v1";
-const PASS_RATIO = 0.60;
+const LS_CHECKLIST_KEY = "bhumi_checklist_items_v1";
 
+/* Default checklist (used if user never customizes or hits reset) */
 const DEFAULT_CHECKLIST_ITEMS = [
-  { id:"liq", textBuy:"Liquidity sweep + rejection confirms buyers", textSell:"Liquidity sweep + rejection confirms sellers" },
+  { id:"liq",       textBuy:"Liquidity sweep + rejection confirms buyers",         textSell:"Liquidity sweep + rejection confirms sellers" },
   { id:"structure", textBuy:"1m structure flips bullish (BOS/CHOCH) BEFORE entry", textSell:"1m structure flips bearish (BOS/CHOCH) BEFORE entry" },
-  { id:"retest", textBuy:"Retest holds (no immediate invalidation)", textSell:"Retest holds (no immediate invalidation)" },
-  { id:"ema", textBuy:"EMAs aligned for direction (not tangled)", textSell:"EMAs aligned for direction (not tangled)" },
-  { id:"momentum", textBuy:"Momentum candle / displacement confirms move", textSell:"Momentum candle / displacement confirms move" },
-  { id:"rr", textBuy:"RR is acceptable (>= 1.5R or clear TP plan)", textSell:"RR is acceptable (>= 1.5R or clear TP plan)" },
-  { id:"news", textBuy:"No high-impact news in next ~10 min", textSell:"No high-impact news in next ~10 min" },
-  { id:"level", textBuy:"Entry is not into major resistance", textSell:"Entry is not into major support" },
-  { id:"risk", textBuy:"SL is logical + position size is controlled", textSell:"SL is logical + position size is controlled" },
-  { id:"plan", textBuy:"I know BE / trail plan before I click", textSell:"I know BE / trail plan before I click" },
+  { id:"retest",    textBuy:"Retest holds (no immediate invalidation)",            textSell:"Retest holds (no immediate invalidation)" },
+  { id:"ema",       textBuy:"EMAs aligned for direction (not tangled)",            textSell:"EMAs aligned for direction (not tangled)" },
+  { id:"momentum",  textBuy:"Momentum candle / displacement confirms move",        textSell:"Momentum candle / displacement confirms move" },
+  { id:"rr",        textBuy:"RR is acceptable (>= 1.5R or clear TP plan)",         textSell:"RR is acceptable (>= 1.5R or clear TP plan)" },
+  { id:"news",      textBuy:"No high-impact news in next ~10 min",                 textSell:"No high-impact news in next ~10 min" },
+  { id:"level",     textBuy:"Entry is not into major resistance",                  textSell:"Entry is not into major support" },
+  { id:"risk",      textBuy:"SL is logical + position size is controlled",         textSell:"SL is logical + position size is controlled" },
+  { id:"plan",      textBuy:"I know BE / trail plan before I click",               textSell:"I know BE / trail plan before I click" },
 ];
 
+function safeParse(json, fallback){
+  try{ return JSON.parse(json); }catch(e){ return fallback; }
+}
 function loadChecklistItems(){
-  try{
-    const raw = localStorage.getItem(CHECKLIST_LS_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    if(Array.isArray(parsed) && parsed.length) return parsed;
-  }catch(e){}
-  localStorage.setItem(CHECKLIST_LS_KEY, JSON.stringify(DEFAULT_CHECKLIST_ITEMS));
-  return [...DEFAULT_CHECKLIST_ITEMS];
+  const raw = localStorage.getItem(LS_CHECKLIST_KEY);
+  const parsed = safeParse(raw || "null", null);
+  if(!Array.isArray(parsed) || parsed.length === 0){
+    return structuredClone(DEFAULT_CHECKLIST_ITEMS);
+  }
+  return parsed
+    .filter(x => x && typeof x === "object")
+    .map(x => ({
+      id: String(x.id || "").trim() || ("id_" + Math.random().toString(16).slice(2)),
+      textBuy: String(x.textBuy || "").trim(),
+      textSell: String(x.textSell || "").trim(),
+    }))
+    .filter(x => x.textBuy || x.textSell);
 }
 function saveChecklistItems(items){
-  localStorage.setItem(CHECKLIST_LS_KEY, JSON.stringify(items));
+  localStorage.setItem(LS_CHECKLIST_KEY, JSON.stringify(items));
 }
 let checklistItems = loadChecklistItems();
 
-function requiredScore(){
-  const n = checklistItems.length;
-  if(n <= 0) return 0;
-  return Math.max(1, Math.ceil(n * PASS_RATIO));
-}
-function getChecklistState(){
-  const host = document.getElementById("checklistList");
-  const out = {};
-  if(!host) return out;
-  host.querySelectorAll('input[type="checkbox"][data-cid]').forEach(cb=>{
-    out[cb.dataset.cid] = cb.checked;
+function buildChecklist(){
+  checklistItems = loadChecklistItems(); // refresh
+  const side = document.getElementById("fSide").value;
+  const box = document.getElementById("checklist");
+  box.innerHTML = "";
+
+  checklistItems.forEach((it)=>{
+    const row = document.createElement("label");
+    row.className = "checkItem";
+    row.innerHTML = `
+      <input type="checkbox" data-cid="${it.id}">
+      <div class="checkText">${side === "Buy" ? (it.textBuy || it.textSell) : (it.textSell || it.textBuy)}</div>
+    `;
+    box.appendChild(row);
   });
+
+  box.querySelectorAll("input[type=checkbox]").forEach(cb=>{
+    cb.addEventListener("change", updateScoreUI);
+  });
+
+  updateScoreUI();
+}
+
+function getChecklistState(){
+  const box = document.getElementById("checklist");
+  const out = {};
+  box.querySelectorAll("input[type=checkbox]").forEach(cb=>{ out[cb.dataset.cid] = cb.checked; });
   return out;
 }
 function setChecklistState(state){
-  const host = document.getElementById("checklistList");
-  if(!host) return;
-  host.querySelectorAll('input[type="checkbox"][data-cid]').forEach(cb=>{
-    cb.checked = !!state?.[cb.dataset.cid];
-  });
+  const box = document.getElementById("checklist");
+  box.querySelectorAll("input[type=checkbox]").forEach(cb=>{ cb.checked = !!state?.[cb.dataset.cid]; });
   updateScoreUI();
 }
 function scoreChecklist(state){
@@ -844,150 +871,33 @@ function scoreChecklist(state){
   for(const k in state) if(state[k]) score++;
   return score;
 }
-
-function renderChecklist(){
-  const host = document.getElementById("checklistList");
-  if(!host) return;
-
-  const side = document.getElementById("fSide").value; // Buy/Sell
-  const keepState = getChecklistState();
-
-  host.innerHTML = "";
-
-  if(!checklistItems.length){
-    host.innerHTML = `<div class="mutedLine">No checklist items. Add one above.</div>`;
-    updateScoreUI();
-    return;
-  }
-
-  checklistItems.forEach((it, idx)=>{
-    const displayText = side === "Buy" ? it.textBuy : it.textSell;
-
-    const wrap = document.createElement("div");
-    wrap.className = "checkItem";
-    wrap.style.flexDirection = "column";
-    wrap.style.gap = "8px";
-
-    wrap.innerHTML = `
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
-        <div style="display:flex;gap:10px;align-items:flex-start;flex:1">
-          <input type="checkbox" data-cid="${it.id}" style="margin-top:2px">
-          <div class="checkText" style="flex:1">
-            <div style="font-weight:900;margin-bottom:3px;color:var(--muted)">Item ${idx+1}</div>
-            <div>${escapeHtml(displayText || "")}</div>
-          </div>
-        </div>
-        <button class="btn tiny danger" type="button" data-del="${it.id}">Delete</button>
-      </div>
-
-      <div class="row2">
-        <div>
-          <label>Buy text</label>
-          <input type="text" data-buy="${it.id}" value="${escapeHtml(it.textBuy || "")}">
-        </div>
-        <div>
-          <label>Sell text</label>
-          <input type="text" data-sell="${it.id}" value="${escapeHtml(it.textSell || "")}">
-        </div>
-      </div>
-    `;
-    host.appendChild(wrap);
-  });
-
-  // restore tick state
-  setChecklistState(keepState);
-
-  // checkbox updates score
-  host.querySelectorAll('input[type="checkbox"][data-cid]').forEach(cb=>{
-    cb.addEventListener("change", updateScoreUI);
-  });
-
-  // delete item
-  host.querySelectorAll("[data-del]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      const id = btn.getAttribute("data-del");
-      if(!confirm("Delete this checklist item?")) return;
-
-      checklistItems = checklistItems.filter(x=>x.id !== id);
-      saveChecklistItems(checklistItems);
-
-      renderChecklist();
-    });
-  });
-
-  // edit item text live
-  host.querySelectorAll("input[data-buy], input[data-sell]").forEach(inp=>{
-    inp.addEventListener("input", ()=>{
-      const id = inp.getAttribute("data-buy") || inp.getAttribute("data-sell");
-      const buyVal = (host.querySelector(`input[data-buy="${id}"]`)?.value || "").trim();
-      const sellVal = (host.querySelector(`input[data-sell="${id}"]`)?.value || "").trim();
-
-      checklistItems = checklistItems.map(x=>{
-        if(x.id !== id) return x;
-        return { ...x, textBuy: buyVal, textSell: sellVal };
-      });
-
-      saveChecklistItems(checklistItems);
-
-      // keep tick state while refreshing displayed line
-      const keep = getChecklistState();
-      renderChecklist();
-      setChecklistState(keep);
-    });
-  });
-
-  // rule line
-  const req = requiredScore();
-  const n = checklistItems.length;
-  document.getElementById("ruleLine").innerHTML =
-    `Rule: Pass if <b>${Math.round(PASS_RATIO*100)}%</b> checked. Current pass = <b>${req}/${n}</b>.`;
-
-  updateScoreUI();
+function passNeedCount(total){
+  return Math.max(1, Math.ceil(total * 0.6)); // ~60%
 }
-
 function updateScoreUI(){
   const state = getChecklistState();
   const score = scoreChecklist(state);
-  const n = checklistItems.length;
-  const req = requiredScore();
-  const pass = (n > 0) ? (score >= req) : false;
+  const total = checklistItems.length || 0;
+  const need = passNeedCount(total);
+  const pass = total === 0 ? true : (score >= need);
 
   const side = document.getElementById("fSide").value;
-  document.getElementById("scoreMain").textContent = `Score: ${score} / ${n}`;
-  document.getElementById("scoreHint").textContent = pass
-    ? `Recommendation: ENTER (${side})`
-    : `Recommendation: DON'T ENTER (${side})`;
-
+  const main = document.getElementById("scoreMain");
+  const hint = document.getElementById("scoreHint");
   const badge = document.getElementById("scoreBadge");
+  const warn = document.getElementById("warnLine");
+
+  main.textContent = `Score: ${score} / ${total}`;
+  hint.textContent = total === 0
+    ? "Recommendation: — (no checklist items)"
+    : `Rule: Pass if ${need}/${total}+ · Recommendation: ${pass ? "ENTER" : "DON'T ENTER"} (${side})`;
+
   badge.textContent = pass ? "ENTER" : "DON'T ENTER";
   badge.classList.toggle("pass", pass);
   badge.classList.toggle("fail", !pass);
 
-  document.getElementById("warnLine").classList.toggle("show", !pass);
+  warn.classList.toggle("show", !pass && total > 0);
 }
-
-/* Add / Reset checklist buttons */
-document.getElementById("btnAddChecklistItem").addEventListener("click", ()=>{
-  const buy = (document.getElementById("newBuyText").value || "").trim();
-  const sell = (document.getElementById("newSellText").value || "").trim();
-  if(!buy || !sell){ alert("Fill both Buy and Sell text."); return; }
-
-  const id = "ci_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
-  checklistItems.push({ id, textBuy: buy, textSell: sell });
-  saveChecklistItems(checklistItems);
-
-  document.getElementById("newBuyText").value = "";
-  document.getElementById("newSellText").value = "";
-
-  renderChecklist();
-});
-
-document.getElementById("btnResetChecklist").addEventListener("click", ()=>{
-  if(!confirm("Reset checklist back to default?")) return;
-  checklistItems = [...DEFAULT_CHECKLIST_ITEMS];
-  saveChecklistItems(checklistItems);
-  renderChecklist();
-});
 
 /* =========================
    Calendar rendering
@@ -1139,19 +1049,6 @@ let currentShot2DataUrl = null;
 let shot1Cleared = false;
 let shot2Cleared = false;
 
-function setShotPreview(slot, dataUrl){
-  const box = document.getElementById(slot === 1 ? "shotPreview1" : "shotPreview2");
-  box.innerHTML = "";
-  if(!dataUrl){ box.textContent = "No screenshot yet"; return; }
-  const img = document.createElement("img");
-  img.src = dataUrl;
-  box.appendChild(img);
-}
-
-function uuid(){
-  return Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
-}
-
 function openModal(id=null){
   editingId = id;
   document.getElementById("btnDelete").style.display = id ? "inline-block" : "none";
@@ -1192,10 +1089,7 @@ function openModal(id=null){
   document.getElementById("shotFile1").value = "";
   document.getElementById("shotFile2").value = "";
 
-  // load + render checklist (ONE UI)
-  checklistItems = loadChecklistItems();
-  renderChecklist();
-  setChecklistState({}); // clean for new trade
+  buildChecklist();
 
   if(id){
     const t = trades.find(x=>x.id===id);
@@ -1226,9 +1120,7 @@ function openModal(id=null){
       document.getElementById("rNext").value = t.refNext ?? "";
       document.getElementById("rNote").value = t.refNote ?? "";
 
-      // checklist tick state per trade
-      checklistItems = loadChecklistItems();
-      renderChecklist();
+      buildChecklist();
       setChecklistState(t.checklist || {});
 
       setShotPreview(1, t.screenshot1 || null);
@@ -1241,6 +1133,14 @@ function openModal(id=null){
 function closeModal(){
   overlay.classList.remove("show");
   editingId = null;
+}
+function setShotPreview(slot, dataUrl){
+  const box = document.getElementById(slot === 1 ? "shotPreview1" : "shotPreview2");
+  box.innerHTML = "";
+  if(!dataUrl){ box.textContent = "No screenshot yet"; return; }
+  const img = document.createElement("img");
+  img.src = dataUrl;
+  box.appendChild(img);
 }
 
 /* Upload listeners */
@@ -1285,14 +1185,17 @@ document.getElementById("btnClearShot2").addEventListener("click", ()=>{
   setShotPreview(2, null);
 });
 
-/* Side changes update visible checklist line (Buy/Sell text) */
+/* Side changes update checklist text */
 document.getElementById("fSide").addEventListener("change", ()=>{
-  const keep = getChecklistState();
-  renderChecklist();
-  setChecklistState(keep);
+  const prevState = getChecklistState();
+  buildChecklist();
+  setChecklistState(prevState);
 });
 
-/* Save trade */
+function uuid(){
+  return Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
+}
+
 document.getElementById("btnSave").addEventListener("click", ()=>{
   const date = document.getElementById("fDate").value || selectedDateISO;
   const time = document.getElementById("fTime").value || "";
@@ -1320,7 +1223,8 @@ document.getElementById("btnSave").addEventListener("click", ()=>{
 
   const checklist = getChecklistState();
   const score = scoreChecklist(checklist);
-  const pass = (checklistItems.length > 0) ? (score >= requiredScore()) : false;
+  const need = passNeedCount(checklistItems.length || 0);
+  const pass = (checklistItems.length === 0) ? true : (score >= need);
 
   const refRight = document.getElementById("rRight").value.trim();
   const refWrong = document.getElementById("rWrong").value.trim();
@@ -1328,6 +1232,7 @@ document.getElementById("btnSave").addEventListener("click", ()=>{
   const refNote = document.getElementById("rNote").value.trim();
 
   const quality = (pass || override==="Yes") ? "ok" : "low";
+
   const existing = editingId ? (trades.find(x=>x.id===editingId) || {}) : {};
 
   const finalShot1 =
@@ -1444,7 +1349,153 @@ document.getElementById("importFile").addEventListener("change", (e)=>{
   reader.readAsText(file);
 });
 
-/* Init */
+/* =========================
+   Checklist Editor
+========================= */
+const clOverlay = document.getElementById("clOverlay");
+const clList = document.getElementById("clList");
+
+function escapeHtml(str){
+  return String(str || "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;");
+}
+function normalizeChecklist(items){
+  const used = new Set();
+  return items
+    .map((x)=>{
+      const buy = String(x.textBuy || "").trim();
+      const sell = String(x.textSell || "").trim();
+      let id = String(x.id || "").trim();
+
+      if(!id){
+        id = ("cl_" + (buy || sell || "item"))
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g,"_")
+          .replace(/^_+|_+$/g,"")
+          .slice(0,40) || ("cl_" + Math.random().toString(16).slice(2));
+      }
+      while(used.has(id)) id = id + "_" + Math.random().toString(16).slice(2,6);
+      used.add(id);
+
+      return { id, textBuy: buy, textSell: sell };
+    })
+    .filter(x => x.textBuy || x.textSell);
+}
+
+function openChecklistEditor(){
+  renderChecklistEditor();
+  clOverlay.classList.add("show");
+}
+function closeChecklistEditor(){
+  clOverlay.classList.remove("show");
+}
+
+function readEditorToItems(){
+  const base = loadChecklistItems();
+  const buys = Array.from(clList.querySelectorAll("input.clBuy"));
+  const sells = Array.from(clList.querySelectorAll("input.clSell"));
+
+  buys.forEach(inp=>{
+    const i = Number(inp.dataset.idx);
+    if(base[i]) base[i].textBuy = inp.value.trim();
+  });
+  sells.forEach(inp=>{
+    const i = Number(inp.dataset.idx);
+    if(base[i]) base[i].textSell = inp.value.trim();
+  });
+
+  return base;
+}
+
+function renderChecklistEditor(){
+  const items = loadChecklistItems();
+  clList.innerHTML = "";
+
+  items.forEach((it, idx)=>{
+    const row = document.createElement("div");
+    row.className = "panel";
+    row.style.padding = "10px";
+    row.innerHTML = `
+      <div class="row2">
+        <div>
+          <label>Buy text</label>
+          <input class="clBuy" data-idx="${idx}" value="${escapeHtml(it.textBuy)}" placeholder="e.g. Daily High swept + reclaim" />
+        </div>
+        <div>
+          <label>Sell text</label>
+          <input class="clSell" data-idx="${idx}" value="${escapeHtml(it.textSell)}" placeholder="e.g. Daily Low swept + reject" />
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:10px">
+        <button class="btn tiny" data-act="up" data-idx="${idx}" type="button">▲ Up</button>
+        <button class="btn tiny" data-act="down" data-idx="${idx}" type="button">▼ Down</button>
+        <button class="btn tiny danger" data-act="del" data-idx="${idx}" type="button">Delete</button>
+      </div>
+    `;
+    clList.appendChild(row);
+  });
+
+  clList.querySelectorAll("button[data-act]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const act = btn.dataset.act;
+      const idx = Number(btn.dataset.idx);
+      const itemsNow = readEditorToItems();
+
+      if(act === "del"){
+        itemsNow.splice(idx, 1);
+      }else if(act === "up" && idx > 0){
+        const tmp = itemsNow[idx-1];
+        itemsNow[idx-1] = itemsNow[idx];
+        itemsNow[idx] = tmp;
+      }else if(act === "down" && idx < itemsNow.length-1){
+        const tmp = itemsNow[idx+1];
+        itemsNow[idx+1] = itemsNow[idx];
+        itemsNow[idx] = tmp;
+      }
+
+      saveChecklistItems(normalizeChecklist(itemsNow));
+      renderChecklistEditor();
+    });
+  });
+}
+
+document.getElementById("btnEditChecklist").addEventListener("click", openChecklistEditor);
+document.getElementById("btnCloseChecklist").addEventListener("click", closeChecklistEditor);
+clOverlay.addEventListener("click", (e)=>{ if(e.target === clOverlay) closeChecklistEditor(); });
+
+document.getElementById("btnAddChecklistItem").addEventListener("click", ()=>{
+  const items = readEditorToItems();
+  items.push({ id:"", textBuy:"", textSell:"" });
+  saveChecklistItems(normalizeChecklist(items));
+  renderChecklistEditor();
+});
+
+document.getElementById("btnResetChecklist").addEventListener("click", ()=>{
+  const ok = confirm("Reset checklist back to default?");
+  if(!ok) return;
+  saveChecklistItems(structuredClone(DEFAULT_CHECKLIST_ITEMS));
+  renderChecklistEditor();
+});
+
+document.getElementById("btnSaveChecklist").addEventListener("click", ()=>{
+  const items = normalizeChecklist(readEditorToItems());
+  saveChecklistItems(items);
+
+  const prev = getChecklistState();
+  buildChecklist();
+  setChecklistState(prev);
+
+  alert("Checklist saved ✅");
+  closeChecklistEditor();
+});
+
+/* =========================
+   Init
+========================= */
 (function init(){
   const now = new Date();
   view = new Date(now.getFullYear(), now.getMonth(), 1);
