@@ -245,7 +245,7 @@
       background:rgba(255,255,255,.04);
       padding:9px 10px;border-radius:14px;
     }
-    .checkItem input{width:18px;height:18px;margin-top:2px}
+    .checkItem input[type="checkbox"]{width:18px;height:18px;margin-top:2px}
     .checkText{font-size:13px;line-height:1.35}
     .scoreBox{
       display:flex;align-items:center;justify-content:space-between;gap:10px;
@@ -402,6 +402,7 @@
         <div class="pill">Realtime sync (iPad + phone + desktop)</div>
         <div class="pill" id="userPill">—</div>
         <button class="btn" id="btnLogout">Logout</button>
+        <button class="btn" id="btnEditChecklist">Edit Checklist</button>
         <button class="btn primary" id="btnNewTrade">+ New Trade</button>
       </div>
     </header>
@@ -506,7 +507,7 @@
     </div>
   </div>
 
-  <!-- Modal -->
+  <!-- Trade Modal -->
   <div class="overlay" id="overlay">
     <div class="modal" role="dialog" aria-modal="true">
       <div class="modalHead">
@@ -629,7 +630,7 @@
           <div class="panel">
             <div class="panelTitle">Entry Checklist (score rule)</div>
             <div class="mutedLine">
-              Rule: <b>Pass if 6/10+</b>. If less than that, it will show “DON’T ENTER”.
+              Rule: <b>Pass if 6+</b>. If less than that, it will show “DON’T ENTER”.
             </div>
 
             <div class="checklist" id="checklist"></div>
@@ -729,6 +730,49 @@
     </div>
   </div>
 
+  <!-- Checklist Editor Modal -->
+  <div class="overlay" id="checkOverlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modalHead">
+        <h3>Edit Checklist</h3>
+        <button class="btn small" id="btnChecklistClose">✕</button>
+      </div>
+
+      <div class="modalBody">
+        <div class="panel">
+          <div class="panelTitle">Checklist items</div>
+          <div class="mutedLine" style="margin-bottom:10px">
+            Add / delete / reorder items. These save to Firestore and sync across devices.
+          </div>
+
+          <div id="checkEditorList" class="checklist"></div>
+
+          <div class="hr"></div>
+
+          <div class="row2">
+            <div>
+              <label>Buy text</label>
+              <input id="newBuyText" placeholder="e.g. Liquidity sweep + rejection confirms buyers" />
+            </div>
+            <div>
+              <label>Sell text</label>
+              <input id="newSellText" placeholder="e.g. Liquidity sweep + rejection confirms sellers" />
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap">
+            <button class="btn" id="btnAddChecklistItem" type="button">+ Add Item</button>
+            <button class="btn primary" id="btnSaveChecklist" type="button">Save Checklist</button>
+          </div>
+
+          <div class="tiny" style="margin-top:8px">
+            Tip: use ↑ ↓ to reorder. If you keep 10 items, your “Score: X/10” style stays familiar.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Firebase + App Script -->
   <script type="module">
     /* =========================
@@ -745,6 +789,7 @@
     import {
       getFirestore,
       doc,
+      getDoc,
       setDoc,
       deleteDoc,
       collection,
@@ -879,9 +924,11 @@
       const end = new Date(d.getFullYear(), 11, 31);
       return { startISO: isoDate(start), endISO: isoDate(end) };
     }
-
     function uuid(){
       return Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
+    }
+    function uidShort(){
+      return Math.random().toString(16).slice(2,8) + Date.now().toString(16).slice(-6);
     }
 
     /* =========================
@@ -920,9 +967,13 @@
     const daysEl = document.getElementById("days");
 
     /* =========================
-       Checklist
+       Checklist (Editable + stored in Firestore)
     ========================= */
-    const checklistItems = [
+    function checklistDocRef(){
+      return doc(db, `users/${currentUser.uid}/settings/checklist`);
+    }
+
+    const DEFAULT_CHECKLIST = [
       { id:"liq", textBuy:"Liquidity sweep + rejection confirms buyers", textSell:"Liquidity sweep + rejection confirms sellers" },
       { id:"structure", textBuy:"1m structure flips bullish (BOS/CHOCH) BEFORE entry", textSell:"1m structure flips bearish (BOS/CHOCH) BEFORE entry" },
       { id:"retest", textBuy:"Retest holds (no immediate invalidation)", textSell:"Retest holds (no immediate invalidation)" },
@@ -935,10 +986,32 @@
       { id:"plan", textBuy:"I know BE / trail plan before I click", textSell:"I know BE / trail plan before I click" },
     ];
 
+    let checklistItems = [...DEFAULT_CHECKLIST];
+
+    async function loadChecklistFromFirestore(){
+      try{
+        const snap = await getDoc(checklistDocRef());
+        if(snap.exists()){
+          const data = snap.data();
+          if(Array.isArray(data.items) && data.items.length){
+            checklistItems = data.items;
+            return;
+          }
+        }
+        // first time: write defaults
+        await setDoc(checklistDocRef(), { items: DEFAULT_CHECKLIST, updatedAt: Date.now() }, { merge:true });
+        checklistItems = [...DEFAULT_CHECKLIST];
+      }catch(err){
+        console.warn("Checklist load failed:", err);
+        checklistItems = [...DEFAULT_CHECKLIST];
+      }
+    }
+
     function buildChecklist(){
       const side = document.getElementById("fSide").value;
       const box = document.getElementById("checklist");
       box.innerHTML = "";
+
       checklistItems.forEach((it)=>{
         const row = document.createElement("label");
         row.className = "checkItem";
@@ -948,46 +1021,162 @@
         `;
         box.appendChild(row);
       });
+
       box.querySelectorAll("input[type=checkbox]").forEach(cb=>{
         cb.addEventListener("change", updateScoreUI);
       });
+
       updateScoreUI();
     }
+
     function getChecklistState(){
       const box = document.getElementById("checklist");
       const out = {};
       box.querySelectorAll("input[type=checkbox]").forEach(cb=>{ out[cb.dataset.cid] = cb.checked; });
       return out;
     }
+
     function setChecklistState(state){
       const box = document.getElementById("checklist");
       box.querySelectorAll("input[type=checkbox]").forEach(cb=>{ cb.checked = !!state?.[cb.dataset.cid]; });
       updateScoreUI();
     }
+
     function scoreChecklist(state){
       let score = 0;
       for(const k in state) if(state[k]) score++;
       return score;
     }
+
     function updateScoreUI(){
       const state = getChecklistState();
       const score = scoreChecklist(state);
+
+      // keep your rule: pass if 6+
       const pass = score >= 6;
       const side = document.getElementById("fSide").value;
-      const main = document.getElementById("scoreMain");
-      const hint = document.getElementById("scoreHint");
+
+      document.getElementById("scoreMain").textContent = `Score: ${score} / ${checklistItems.length}`;
+      document.getElementById("scoreHint").textContent = pass
+        ? `Recommendation: ENTER (${side})`
+        : `Recommendation: DON'T ENTER (${side})`;
+
       const badge = document.getElementById("scoreBadge");
-      const warn = document.getElementById("warnLine");
-
-      main.textContent = `Score: ${score} / 10`;
-      hint.textContent = pass ? `Recommendation: ENTER (${side})` : `Recommendation: DON'T ENTER (${side})`;
-
       badge.textContent = pass ? "ENTER" : "DON'T ENTER";
       badge.classList.toggle("pass", pass);
       badge.classList.toggle("fail", !pass);
 
-      warn.classList.toggle("show", !pass);
+      document.getElementById("warnLine").classList.toggle("show", !pass);
     }
+
+    /* =========================
+       Checklist Editor UI
+    ========================= */
+    const checkOverlay = document.getElementById("checkOverlay");
+    const checkEditorList = document.getElementById("checkEditorList");
+
+    function openChecklistEditor(){
+      renderChecklistEditor();
+      checkOverlay.classList.add("show");
+    }
+    function closeChecklistEditor(){
+      checkOverlay.classList.remove("show");
+    }
+
+    function renderChecklistEditor(){
+      checkEditorList.innerHTML = "";
+
+      checklistItems.forEach((it, idx)=>{
+        const row = document.createElement("div");
+        row.className = "checkItem";
+        row.style.alignItems = "center";
+        row.innerHTML = `
+          <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+            <div class="mutedLine" style="font-size:11px">Item ${idx+1}</div>
+            <input data-k="buy" data-id="${it.id}" value="${(it.textBuy||"").replace(/"/g,'&quot;')}" />
+            <input data-k="sell" data-id="${it.id}" value="${(it.textSell||"").replace(/"/g,'&quot;')}" />
+          </div>
+
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn tiny" data-act="up" data-id="${it.id}" type="button">↑</button>
+            <button class="btn tiny" data-act="down" data-id="${it.id}" type="button">↓</button>
+            <button class="btn tiny danger" data-act="del" data-id="${it.id}" type="button">Delete</button>
+          </div>
+        `;
+        checkEditorList.appendChild(row);
+      });
+
+      // typing edits
+      checkEditorList.querySelectorAll("input[data-k]").forEach(inp=>{
+        inp.addEventListener("input", (e)=>{
+          const id = e.target.dataset.id;
+          const k  = e.target.dataset.k;
+          const v  = e.target.value;
+
+          const item = checklistItems.find(x=>x.id===id);
+          if(!item) return;
+          if(k === "buy") item.textBuy = v;
+          if(k === "sell") item.textSell = v;
+        });
+      });
+
+      // buttons
+      checkEditorList.querySelectorAll("button[data-act]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          const act = btn.dataset.act;
+          const id  = btn.dataset.id;
+          const i = checklistItems.findIndex(x=>x.id===id);
+          if(i < 0) return;
+
+          if(act === "del"){
+            checklistItems.splice(i,1);
+            renderChecklistEditor();
+            return;
+          }
+          if(act === "up" && i>0){
+            [checklistItems[i-1], checklistItems[i]] = [checklistItems[i], checklistItems[i-1]];
+            renderChecklistEditor();
+            return;
+          }
+          if(act === "down" && i < checklistItems.length-1){
+            [checklistItems[i+1], checklistItems[i]] = [checklistItems[i], checklistItems[i+1]];
+            renderChecklistEditor();
+            return;
+          }
+        });
+      });
+    }
+
+    document.getElementById("btnEditChecklist").addEventListener("click", openChecklistEditor);
+    document.getElementById("btnChecklistClose").addEventListener("click", closeChecklistEditor);
+    checkOverlay.addEventListener("click", (e)=>{ if(e.target===checkOverlay) closeChecklistEditor(); });
+
+    document.getElementById("btnAddChecklistItem").addEventListener("click", ()=>{
+      const buy = document.getElementById("newBuyText").value.trim();
+      const sell = document.getElementById("newSellText").value.trim();
+      if(!buy || !sell){
+        alert("Please enter both Buy text and Sell text.");
+        return;
+      }
+      checklistItems.push({
+        id: "c-" + uidShort(),
+        textBuy: buy,
+        textSell: sell
+      });
+      document.getElementById("newBuyText").value = "";
+      document.getElementById("newSellText").value = "";
+      renderChecklistEditor();
+    });
+
+    document.getElementById("btnSaveChecklist").addEventListener("click", async ()=>{
+      try{
+        await setDoc(checklistDocRef(), { items: checklistItems, updatedAt: Date.now() }, { merge:true });
+        alert("Checklist saved ✅");
+        closeChecklistEditor();
+      }catch(err){
+        alert("Failed to save checklist.\n\n" + (err?.message || String(err)));
+      }
+    });
 
     /* =========================
        Calendar rendering
@@ -1454,6 +1643,9 @@
 
       currentUser = user;
       userPill.textContent = `Logged in: ${user.email}`;
+
+      // ✅ load checklist from Firestore (editable)
+      await loadChecklistFromFirestore();
 
       showApp();
       startTradesListener();
