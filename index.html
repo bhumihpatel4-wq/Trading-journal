@@ -144,9 +144,13 @@
       pointer-events:none;
     }
 
-    .detail{padding:14px}
+    .detail{
+      padding:14px;
+    }
     .detail .tip{color:var(--muted2);font-size:12px;line-height:1.45;margin-bottom:12px}
-    .summaryRow{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+    .summaryRow{
+      display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px
+    }
     .stat{
       flex:1;
       min-width:150px;
@@ -224,7 +228,9 @@
       grid-template-columns: 1fr 1fr;
       gap:14px;
     }
-    @media (max-width: 980px){.modalGrid{grid-template-columns:1fr}}
+    @media (max-width: 980px){
+      .modalGrid{grid-template-columns:1fr}
+    }
     .panel{
       background:rgba(0,0,0,.30);
       border:1px solid rgba(255,255,255,.12);
@@ -254,15 +260,17 @@
     }
     textarea{min-height:94px;resize:vertical}
     .tiny{font-size:11px;color:var(--muted2);margin-top:6px;line-height:1.35}
-    .checklist{display:flex;flex-direction:column;gap:8px}
+
     .checkItem{
       display:flex;gap:10px;align-items:flex-start;
       border:1px solid rgba(255,255,255,.10);
       background:rgba(255,255,255,.04);
       padding:9px 10px;border-radius:14px;
+      margin-bottom:10px;
     }
-    .checkItem input[type=checkbox]{width:18px;height:18px;margin-top:2px}
+    .checkItem input[type="checkbox"]{width:18px;height:18px;margin-top:2px}
     .checkText{font-size:13px;line-height:1.35}
+
     .scoreBox{
       display:flex;align-items:center;justify-content:space-between;gap:10px;
       border:1px solid rgba(255,255,255,.12);
@@ -564,20 +572,19 @@
             </div>
           </div>
 
-          <!-- RIGHT: Checklist + Reflection -->
+          <!-- RIGHT: ONE checklist only + reflection -->
           <div class="panel">
+            <div class="panelTitle">Checklist (editable)</div>
 
-            <!-- MANAGE CHECKLIST -->
-            <div class="panelTitle">Manage checklist</div>
             <div class="imgBox" style="margin-bottom:10px">
               <div class="row2">
                 <div>
                   <label>New item (Buy text)</label>
-                  <input id="newBuyText" placeholder="e.g. Sweep + rejection at key level" />
+                  <input id="newBuyText" placeholder="e.g. Daily high / daily low respected" />
                 </div>
                 <div>
                   <label>New item (Sell text)</label>
-                  <input id="newSellText" placeholder="e.g. Sweep + rejection at key level" />
+                  <input id="newSellText" placeholder="e.g. Daily high / daily low respected" />
                 </div>
               </div>
 
@@ -587,33 +594,29 @@
               </div>
 
               <div class="tiny" style="margin-top:8px">
-                Tip: If Buy/Sell text is the same, type the same line in both.
+                One checklist only: tick + edit + delete here. (Like Apple Reminders.)
               </div>
 
               <div class="hr"></div>
-              <div id="checklistManager"></div>
-            </div>
 
-            <div class="panelTitle">Entry Checklist (score rule)</div>
-            <div class="mutedLine" id="ruleLine">
-              Rule: Pass if <b>60%</b> of items are checked (auto-adjusts).
-            </div>
+              <!-- ONLY checklist UI -->
+              <div id="checklistList"></div>
 
-            <div class="checklist" id="checklist"></div>
-
-            <div class="scoreBox">
-              <div>
-                <div class="scoreMain" id="scoreMain">Score: 0 / 0</div>
-                <div class="scoreHint" id="scoreHint">Recommendation: —</div>
+              <div class="scoreBox" style="margin-top:10px">
+                <div>
+                  <div class="scoreMain" id="scoreMain">Score: 0 / 0</div>
+                  <div class="scoreHint" id="scoreHint">Recommendation: —</div>
+                  <div class="mutedLine" id="ruleLine" style="margin-top:6px">
+                    Rule: Pass if 60% checked (auto-adjusts).
+                  </div>
+                </div>
+                <div class="scoreBadge fail" id="scoreBadge">DON'T ENTER</div>
               </div>
-              <div class="scoreBadge fail" id="scoreBadge">DON'T ENTER</div>
-            </div>
 
-            <div class="warnLine" id="warnLine">
-              Checklist failed. If you still take it, set <b>Manual override = Yes</b> (left side) or accept it as low-quality.
+              <div class="warnLine" id="warnLine" style="margin-top:10px">
+                Checklist failed. If you still take it, set <b>Manual override = Yes</b> (left side) or accept it as low-quality.
+              </div>
             </div>
-
-            <div class="hr"></div>
 
             <div class="panelTitle">Entry notes (optional)</div>
             <label>Extra entry reason notes (optional)</label>
@@ -701,7 +704,6 @@
    Storage + helpers
 ========================= */
 const LS_KEY = "bhumi_trading_journal_v1";
-
 function loadAll(){
   try{ return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); }
   catch(e){ return []; }
@@ -723,11 +725,8 @@ function fmtDateLabel(iso){
   const d = new Date(iso+"T00:00:00");
   return d.toLocaleDateString(undefined, {weekday:"short", day:"numeric", month:"short", year:"numeric"});
 }
-function uuid(){
-  return Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
-}
 function escapeHtml(str){
-  return String(str)
+  return String(str || "")
     .replaceAll("&","&amp;")
     .replaceAll("<","&lt;")
     .replaceAll(">","&gt;")
@@ -764,6 +763,7 @@ function yearRangeFromISO(anyISO){
   const end = new Date(d.getFullYear(), 11, 31);
   return { startISO: isoDate(start), endISO: isoDate(end) };
 }
+let trades = loadAll();
 function sumPLInRange(startISO, endISO){
   let s = 0;
   let c = 0;
@@ -777,11 +777,17 @@ function sumPLInRange(startISO, endISO){
 }
 
 /* =========================
-   Editable checklist (localStorage)
+   Calendar state
+========================= */
+let view = new Date();
+let selectedDateISO = isoDate(new Date());
+let editingId = null;
+const daysEl = document.getElementById("days");
+
+/* =========================
+   ONE editable checklist (no duplicate)
 ========================= */
 const CHECKLIST_LS_KEY = "bhumi_trading_journal_checklist_v1";
-
-// pass threshold: 60% checked (auto-adjust)
 const PASS_RATIO = 0.60;
 
 const DEFAULT_CHECKLIST_ITEMS = [
@@ -811,62 +817,26 @@ function saveChecklistItems(items){
 }
 let checklistItems = loadChecklistItems();
 
-/* =========================
-   Calendar state
-========================= */
-let trades = loadAll();
-let view = new Date();
-let selectedDateISO = isoDate(new Date());
-let editingId = null;
-const daysEl = document.getElementById("days");
-
-/* =========================
-   Checklist UI
-========================= */
 function requiredScore(){
   const n = checklistItems.length;
   if(n <= 0) return 0;
   return Math.max(1, Math.ceil(n * PASS_RATIO));
 }
-function buildChecklist(){
-  const side = document.getElementById("fSide").value;
-  const box = document.getElementById("checklist");
-  box.innerHTML = "";
-
-  if(!checklistItems.length){
-    box.innerHTML = `<div class="mutedLine">No checklist items. Add one above.</div>`;
-    updateScoreUI();
-    return;
-  }
-
-  checklistItems.forEach((it)=>{
-    const row = document.createElement("label");
-    row.className = "checkItem";
-    row.innerHTML = `
-      <input type="checkbox" data-cid="${it.id}">
-      <div class="checkText">${side === "Buy" ? escapeHtml(it.textBuy) : escapeHtml(it.textSell)}</div>
-    `;
-    box.appendChild(row);
-  });
-
-  box.querySelectorAll("input[type=checkbox]").forEach(cb=>{
-    cb.addEventListener("change", updateScoreUI);
-  });
-
-  document.getElementById("ruleLine").innerHTML =
-    `Rule: Pass if <b>${Math.round(PASS_RATIO*100)}%</b> of items are checked (auto-adjusts). Current pass = <b>${requiredScore()}/${checklistItems.length}</b>.`;
-
-  updateScoreUI();
-}
 function getChecklistState(){
-  const box = document.getElementById("checklist");
+  const host = document.getElementById("checklistList");
   const out = {};
-  box.querySelectorAll("input[type=checkbox]").forEach(cb=>{ out[cb.dataset.cid] = cb.checked; });
+  if(!host) return out;
+  host.querySelectorAll('input[type="checkbox"][data-cid]').forEach(cb=>{
+    out[cb.dataset.cid] = cb.checked;
+  });
   return out;
 }
 function setChecklistState(state){
-  const box = document.getElementById("checklist");
-  box.querySelectorAll("input[type=checkbox]").forEach(cb=>{ cb.checked = !!state?.[cb.dataset.cid]; });
+  const host = document.getElementById("checklistList");
+  if(!host) return;
+  host.querySelectorAll('input[type="checkbox"][data-cid]').forEach(cb=>{
+    cb.checked = !!state?.[cb.dataset.cid];
+  });
   updateScoreUI();
 }
 function scoreChecklist(state){
@@ -874,12 +844,113 @@ function scoreChecklist(state){
   for(const k in state) if(state[k]) score++;
   return score;
 }
+
+function renderChecklist(){
+  const host = document.getElementById("checklistList");
+  if(!host) return;
+
+  const side = document.getElementById("fSide").value; // Buy/Sell
+  const keepState = getChecklistState();
+
+  host.innerHTML = "";
+
+  if(!checklistItems.length){
+    host.innerHTML = `<div class="mutedLine">No checklist items. Add one above.</div>`;
+    updateScoreUI();
+    return;
+  }
+
+  checklistItems.forEach((it, idx)=>{
+    const displayText = side === "Buy" ? it.textBuy : it.textSell;
+
+    const wrap = document.createElement("div");
+    wrap.className = "checkItem";
+    wrap.style.flexDirection = "column";
+    wrap.style.gap = "8px";
+
+    wrap.innerHTML = `
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+        <div style="display:flex;gap:10px;align-items:flex-start;flex:1">
+          <input type="checkbox" data-cid="${it.id}" style="margin-top:2px">
+          <div class="checkText" style="flex:1">
+            <div style="font-weight:900;margin-bottom:3px;color:var(--muted)">Item ${idx+1}</div>
+            <div>${escapeHtml(displayText || "")}</div>
+          </div>
+        </div>
+        <button class="btn tiny danger" type="button" data-del="${it.id}">Delete</button>
+      </div>
+
+      <div class="row2">
+        <div>
+          <label>Buy text</label>
+          <input type="text" data-buy="${it.id}" value="${escapeHtml(it.textBuy || "")}">
+        </div>
+        <div>
+          <label>Sell text</label>
+          <input type="text" data-sell="${it.id}" value="${escapeHtml(it.textSell || "")}">
+        </div>
+      </div>
+    `;
+    host.appendChild(wrap);
+  });
+
+  // restore tick state
+  setChecklistState(keepState);
+
+  // checkbox updates score
+  host.querySelectorAll('input[type="checkbox"][data-cid]').forEach(cb=>{
+    cb.addEventListener("change", updateScoreUI);
+  });
+
+  // delete item
+  host.querySelectorAll("[data-del]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.getAttribute("data-del");
+      if(!confirm("Delete this checklist item?")) return;
+
+      checklistItems = checklistItems.filter(x=>x.id !== id);
+      saveChecklistItems(checklistItems);
+
+      renderChecklist();
+    });
+  });
+
+  // edit item text live
+  host.querySelectorAll("input[data-buy], input[data-sell]").forEach(inp=>{
+    inp.addEventListener("input", ()=>{
+      const id = inp.getAttribute("data-buy") || inp.getAttribute("data-sell");
+      const buyVal = (host.querySelector(`input[data-buy="${id}"]`)?.value || "").trim();
+      const sellVal = (host.querySelector(`input[data-sell="${id}"]`)?.value || "").trim();
+
+      checklistItems = checklistItems.map(x=>{
+        if(x.id !== id) return x;
+        return { ...x, textBuy: buyVal, textSell: sellVal };
+      });
+
+      saveChecklistItems(checklistItems);
+
+      // keep tick state while refreshing displayed line
+      const keep = getChecklistState();
+      renderChecklist();
+      setChecklistState(keep);
+    });
+  });
+
+  // rule line
+  const req = requiredScore();
+  const n = checklistItems.length;
+  document.getElementById("ruleLine").innerHTML =
+    `Rule: Pass if <b>${Math.round(PASS_RATIO*100)}%</b> checked. Current pass = <b>${req}/${n}</b>.`;
+
+  updateScoreUI();
+}
+
 function updateScoreUI(){
   const state = getChecklistState();
   const score = scoreChecklist(state);
   const n = checklistItems.length;
   const req = requiredScore();
-  const pass = (n === 0) ? false : (score >= req);
+  const pass = (n > 0) ? (score >= req) : false;
 
   const side = document.getElementById("fSide").value;
   document.getElementById("scoreMain").textContent = `Score: ${score} / ${n}`;
@@ -895,82 +966,28 @@ function updateScoreUI(){
   document.getElementById("warnLine").classList.toggle("show", !pass);
 }
 
-/* Checklist manager UI */
-function renderChecklistManager(){
-  const host = document.getElementById("checklistManager");
-  if(!host) return;
+/* Add / Reset checklist buttons */
+document.getElementById("btnAddChecklistItem").addEventListener("click", ()=>{
+  const buy = (document.getElementById("newBuyText").value || "").trim();
+  const sell = (document.getElementById("newSellText").value || "").trim();
+  if(!buy || !sell){ alert("Fill both Buy and Sell text."); return; }
 
-  host.innerHTML = "";
+  const id = "ci_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+  checklistItems.push({ id, textBuy: buy, textSell: sell });
+  saveChecklistItems(checklistItems);
 
-  if(!checklistItems.length){
-    host.innerHTML = `<div class="mutedLine">No checklist items. Add one above.</div>`;
-    return;
-  }
+  document.getElementById("newBuyText").value = "";
+  document.getElementById("newSellText").value = "";
 
-  checklistItems.forEach((it, idx)=>{
-    const row = document.createElement("div");
-    row.className = "checkItem";
-    row.style.flexDirection = "column";
-    row.style.gap = "8px";
+  renderChecklist();
+});
 
-    row.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-        <div style="font-weight:900;color:var(--muted);font-size:12px">Item ${idx+1}</div>
-        <button class="btn tiny danger" type="button" data-del="${it.id}">Delete</button>
-      </div>
-
-      <div class="row2">
-        <div>
-          <label>Buy text</label>
-          <input type="text" data-buy="${it.id}" value="${escapeHtml(it.textBuy || "")}">
-        </div>
-        <div>
-          <label>Sell text</label>
-          <input type="text" data-sell="${it.id}" value="${escapeHtml(it.textSell || "")}">
-        </div>
-      </div>
-    `;
-
-    host.appendChild(row);
-  });
-
-  // Delete
-  host.querySelectorAll("[data-del]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      const id = btn.getAttribute("data-del");
-      const ok = confirm("Delete this checklist item?");
-      if(!ok) return;
-
-      checklistItems = checklistItems.filter(x=>x.id !== id);
-      saveChecklistItems(checklistItems);
-
-      renderChecklistManager();
-      buildChecklist();
-    });
-  });
-
-  // Edit (save on typing)
-  host.querySelectorAll("input[data-buy], input[data-sell]").forEach(inp=>{
-    inp.addEventListener("input", ()=>{
-      const id = inp.getAttribute("data-buy") || inp.getAttribute("data-sell");
-
-      const buyVal = (host.querySelector(`input[data-buy="${id}"]`)?.value || "").trim();
-      const sellVal = (host.querySelector(`input[data-sell="${id}"]`)?.value || "").trim();
-
-      checklistItems = checklistItems.map(x=>{
-        if(x.id !== id) return x;
-        return { ...x, textBuy: buyVal, textSell: sellVal };
-      });
-
-      saveChecklistItems(checklistItems);
-
-      // Keep checkbox state while rebuilding
-      const prev = getChecklistState();
-      buildChecklist();
-      setChecklistState(prev);
-    });
-  });
-}
+document.getElementById("btnResetChecklist").addEventListener("click", ()=>{
+  if(!confirm("Reset checklist back to default?")) return;
+  checklistItems = [...DEFAULT_CHECKLIST_ITEMS];
+  saveChecklistItems(checklistItems);
+  renderChecklist();
+});
 
 /* =========================
    Calendar rendering
@@ -1131,13 +1148,14 @@ function setShotPreview(slot, dataUrl){
   box.appendChild(img);
 }
 
+function uuid(){
+  return Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
+}
+
 function openModal(id=null){
   editingId = id;
   document.getElementById("btnDelete").style.display = id ? "inline-block" : "none";
   document.getElementById("modalTitle").textContent = id ? "Edit Trade" : "New Trade";
-
-  // refresh checklist from storage (in case you changed it)
-  checklistItems = loadChecklistItems();
 
   const now = new Date();
   document.getElementById("fDate").value = selectedDateISO || isoDate(now);
@@ -1174,8 +1192,10 @@ function openModal(id=null){
   document.getElementById("shotFile1").value = "";
   document.getElementById("shotFile2").value = "";
 
-  renderChecklistManager();
-  buildChecklist();
+  // load + render checklist (ONE UI)
+  checklistItems = loadChecklistItems();
+  renderChecklist();
+  setChecklistState({}); // clean for new trade
 
   if(id){
     const t = trades.find(x=>x.id===id);
@@ -1206,7 +1226,9 @@ function openModal(id=null){
       document.getElementById("rNext").value = t.refNext ?? "";
       document.getElementById("rNote").value = t.refNote ?? "";
 
-      buildChecklist();
+      // checklist tick state per trade
+      checklistItems = loadChecklistItems();
+      renderChecklist();
       setChecklistState(t.checklist || {});
 
       setShotPreview(1, t.screenshot1 || null);
@@ -1263,50 +1285,14 @@ document.getElementById("btnClearShot2").addEventListener("click", ()=>{
   setShotPreview(2, null);
 });
 
-/* Side changes update checklist text (keep checks) */
+/* Side changes update visible checklist line (Buy/Sell text) */
 document.getElementById("fSide").addEventListener("change", ()=>{
-  const prevState = getChecklistState();
-  buildChecklist();
-  setChecklistState(prevState);
+  const keep = getChecklistState();
+  renderChecklist();
+  setChecklistState(keep);
 });
 
-/* Add / Reset checklist buttons */
-document.getElementById("btnAddChecklistItem").addEventListener("click", ()=>{
-  const buy = (document.getElementById("newBuyText").value || "").trim();
-  const sell = (document.getElementById("newSellText").value || "").trim();
-
-  if(!buy || !sell){
-    alert("Please fill BOTH Buy text and Sell text.");
-    return;
-  }
-
-  const id = "ci_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
-  checklistItems.push({ id, textBuy: buy, textSell: sell });
-  saveChecklistItems(checklistItems);
-
-  document.getElementById("newBuyText").value = "";
-  document.getElementById("newSellText").value = "";
-
-  // keep current checks while rebuilding
-  const prev = getChecklistState();
-  renderChecklistManager();
-  buildChecklist();
-  setChecklistState(prev);
-});
-
-document.getElementById("btnResetChecklist").addEventListener("click", ()=>{
-  const ok = confirm("Reset checklist back to default? This will remove your custom items.");
-  if(!ok) return;
-  checklistItems = [...DEFAULT_CHECKLIST_ITEMS];
-  saveChecklistItems(checklistItems);
-
-  const prev = getChecklistState();
-  renderChecklistManager();
-  buildChecklist();
-  setChecklistState(prev);
-});
-
-/* Save Trade */
+/* Save trade */
 document.getElementById("btnSave").addEventListener("click", ()=>{
   const date = document.getElementById("fDate").value || selectedDateISO;
   const time = document.getElementById("fTime").value || "";
@@ -1342,7 +1328,6 @@ document.getElementById("btnSave").addEventListener("click", ()=>{
   const refNote = document.getElementById("rNote").value.trim();
 
   const quality = (pass || override==="Yes") ? "ok" : "low";
-
   const existing = editingId ? (trades.find(x=>x.id===editingId) || {}) : {};
 
   const finalShot1 =
@@ -1388,7 +1373,6 @@ document.getElementById("btnSave").addEventListener("click", ()=>{
   closeModal();
 });
 
-/* Delete trade */
 document.getElementById("btnDelete").addEventListener("click", ()=>{
   if(!editingId) return;
   const ok = confirm("Delete this trade?");
