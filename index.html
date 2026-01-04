@@ -1467,11 +1467,25 @@ document.getElementById("btnEditChecklist").addEventListener("click", openCheckl
 document.getElementById("btnCloseChecklist").addEventListener("click", closeChecklistEditor);
 clOverlay.addEventListener("click", (e)=>{ if(e.target === clOverlay) closeChecklistEditor(); });
 
+/* ✅ FIXED: Add item now creates a NON-empty row so it doesn't get deleted by normalizeChecklist() */
 document.getElementById("btnAddChecklistItem").addEventListener("click", ()=>{
   const items = readEditorToItems();
-  items.push({ id:"", textBuy:"", textSell:"" });
+
+  items.push({
+    id: "",
+    textBuy: "New checklist item (edit this)",
+    textSell: "New checklist item (edit this)"
+  });
+
   saveChecklistItems(normalizeChecklist(items));
   renderChecklistEditor();
+
+  // auto-focus the new row (Buy input)
+  setTimeout(() => {
+    const lastIdx = items.length - 1;
+    const lastBuy = clList.querySelector(`input.clBuy[data-idx="${lastIdx}"]`);
+    if(lastBuy) lastBuy.focus();
+  }, 0);
 });
 
 document.getElementById("btnResetChecklist").addEventListener("click", ()=>{
